@@ -1,7 +1,7 @@
-BPMF
-Mick Ramsey
+(*BPMF
+Mick Ramsey*)
 
-Initial Condition/Import Data
+(*Initial Condition/Import Data*)
 
 Clear["Global`*"]
 Needs["MultivariateStatistics`"]
@@ -26,7 +26,7 @@ traindata = Import["/Users/mick/Desktop/PROJECT/ImportData/traindata.csv"];
 spMD = SparseArray[matrixdata];
 
 
-Equations
+(*Equations*)
 
 uu = probedata[[All, 1]]; (*list users in probe data set*)
 vv = 
@@ -79,7 +79,7 @@ UVlat[\[Lambda]_, \[Mu]m_] :=
  Flatten[\[Lambda].RandomVariate[NormalDistribution[0, 1], dim] + \[Mu]m]
 
 
-Module
+(*Module*)
 
 bArray = {};
 aArray = {};
@@ -138,7 +138,7 @@ Monitor[Do[
     
     ], {t, ProgressIndicator[t, {1, 5000}]}]; // AbsoluteTiming
 
-Results and Graphs
+(*Results and Graphs*)
 
 ListPlot[eArray]
 
