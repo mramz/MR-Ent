@@ -1,164 +1,1858 @@
-(*BPMF
-Mick Ramsey*)
+(* Content-type: application/vnd.wolfram.mathematica *)
 
-(*Initial Condition/Import Data*)
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
 
-Clear["Global`*"]
-Needs["MultivariateStatistics`"]
+(* CreatedBy='Mathematica 10.0' *)
 
-Needs["MultivariateStatistics`"]
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     88372,       1849]
+NotebookOptionsPosition[     86510,       1781]
+NotebookOutlinePosition[     86868,       1797]
+CellTagsIndexPosition[     86825,       1794]
+WindowFrame->Normal*)
 
-dim = 10; (*Dimension of Latenet Features*)
-\[Beta]0 = 2.;
-W0 = N[IdentityMatrix[dim]]; (*Hyperparameter*)
-\[Mu]0 = 
- N[Transpose[{ConstantArray[0, 
-     dim]}]];(*Hyperparameter*)
-\[Nu]0 = 10. (*Hyperparameter*)
+(* Beginning of Notebook Content *)
+Notebook[{
 
-Vj = Import["/Users/mick/Desktop/PROJECT/ImportData/movie.csv"];
-Ui = Import["/Users/mick/Desktop/PROJECT/ImportData/user.csv"];
-matrixdata = 
-  Import["/Users/mick/Desktop/PROJECT/ImportData/netflixdata.csv"];
-probedata = Import["/Users/mick/Desktop/PROJECT/ImportData/probedata.csv"];
-traindata = Import["/Users/mick/Desktop/PROJECT/ImportData/traindata.csv"];
+Cell[CellGroupData[{
+Cell[TextData[{
+ "BPMF",
+ StyleBox["\nMick Ramsey",
+  FontSize->16]
+}], "Title",
+ CellChangeTimes->{{3.4632619436272793`*^9, 3.463261968416212*^9}, {
+  3.671340401887377*^9, 3.6713404072406807`*^9}, {3.671401524861766*^9, 
+  3.6714015272904377`*^9}, {3.677302240645755*^9, 3.677302242018333*^9}}],
 
-spMD = SparseArray[matrixdata];
+Cell[CellGroupData[{
 
+Cell["Initial Condition/Import Data", "Section",
+ CellChangeTimes->{{3.463261996617159*^9, 3.463262008856533*^9}, {
+  3.6773017198381166`*^9, 3.677301731045281*^9}}],
 
-(*Equations*)
+Cell[BoxData[{
+ RowBox[{"Clear", "[", "\"\<Global`*\>\"", "]"}], "\[IndentingNewLine]", 
+ RowBox[{"Needs", "[", "\"\<MultivariateStatistics`\>\"", "]"}]}], "Input",
+ CellChangeTimes->{{3.675577740734392*^9, 3.675577741350281*^9}, {
+  3.675598100864019*^9, 3.675598101876522*^9}, {3.675611567273628*^9, 
+  3.675611568686604*^9}}],
 
-uu = probedata[[All, 1]]; (*list users in probe data set*)
-vv = 
- probedata[[All, 2]];(*list of rated movies in probe data set*)
-ratings = 
- N[probedata[[All, 
-    3]]]; (*Rating cooresponding to user movie combition*)
-meanrating = 
- N[Mean[traindata[[All, 3]]]];
-d = Transpose[spMD]["AdjacencyLists"];
-c = spMD["AdjacencyLists"];
-rij = ReplaceAll[
-   DeleteCases[0] /@ Transpose[matrixdata], {} -> ConstantArray[0, 1]];
-rij2 = Select[DeleteCases[0] /@ matrixdata, UnsameQ[#, {}] &];
-AB = ReplaceAll[Map[(Ui[[#, All]]) &, d], {} -> ConstantArray[0, {1, dim}]];
-BA = Map[(Vj[[#, All]]) &, c];
+Cell[BoxData[
+ RowBox[{"Needs", "[", "\"\<MultivariateStatistics`\>\"", "]"}]], "Input",
+ CellChangeTimes->{{3.675595055142323*^9, 3.675595056241844*^9}, {
+  3.675625738375482*^9, 3.6756257390893393`*^9}}],
 
-iW[iAB_] := 
-  With[{Nuv = N[Length[iAB]], Suv = N[Covariance[iAB]], 
-    Xuv = N[Transpose[{Mean[iAB]}]]}, (Inverse[
-       Inverse[W0] + 
-        Nuv Suv + (\[Beta]0 Nuv)/(\[Beta]0 + Nuv)*(\[Mu]0 - 
-            Xuv).Transpose[\[Mu]0 - Xuv]] + 
-      Transpose[
-       Inverse[Inverse[W0] + 
-         Nuv Suv + (\[Beta]0 Nuv)/(\[Beta]0 + Nuv)*(\[Mu]0 - 
-             Xuv).Transpose[\[Mu]0 - Xuv]]])/2];
-iL[iAB_, \[CapitalLambda]_] := 
- Transpose[CholeskyDecomposition[(Inverse[(\[Beta]0 + 
-          N[Length[iAB]])*\[CapitalLambda]] + 
-      Transpose[Inverse[(\[Beta]0 + N[Length[iAB]])*\[CapitalLambda]]])/2]]
-i\[CapitalLambda]uv[iAB_] := 
- With[{W = iW[iAB], \[Nu] = \[Nu]0 + N[Length[iAB]]}, 
-  RandomVariate[WishartDistribution[W, \[Nu]]]]
-i\[Mu]uv[iAB_, \[CapitalLambda]_] := 
- With[{L = iL[
-     iAB, \[CapitalLambda]], \[Mu] = (\[Beta]0 \[Mu]0 + 
-       N[Length[iAB]] N[Transpose[{Mean[iAB]}]])/(\[Beta]0 + 
-       N[Length[iAB]])}, \[Mu] + 
-   L.RandomVariate[NormalDistribution[0, 1], dim]]
+Cell[CellGroupData[{
 
-\[Mu]mean[\[CapitalLambda]_, uv_, 
-  r_, \[CapitalLambda]C_, \[Mu]C_] := \[CapitalLambda].(\[Beta]0*
-     Transpose[uv].(r - meanrating) + \[CapitalLambda]C.\[Mu]C)
-\[CapitalLambda]covar[
-  uv_, \[CapitalLambda]C_] := (Inverse[\[CapitalLambda]C + \[Beta]0*
-       Transpose[uv].uv] + 
-    Transpose[Inverse[\[CapitalLambda]C + \[Beta]0*Transpose[uv].uv]])/2
-UVlat[\[Lambda]_, \[Mu]m_] := 
- Flatten[\[Lambda].RandomVariate[NormalDistribution[0, 1], dim] + \[Mu]m]
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{
+   RowBox[{"dim", "=", "10"}], ";"}], " ", 
+  RowBox[{"(*", 
+   RowBox[{"Dimension", " ", "of", " ", "Latenet", " ", "Features"}], 
+   "*)"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"\[Beta]0", "=", "2."}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"W0", "=", 
+    RowBox[{"N", "[", 
+     RowBox[{"IdentityMatrix", "[", "dim", "]"}], "]"}]}], ";"}], " ", 
+  RowBox[{"(*", "Hyperparameter", "*)"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"\[Mu]0", "=", 
+    RowBox[{"N", "[", 
+     RowBox[{"Transpose", "[", 
+      RowBox[{"{", 
+       RowBox[{"ConstantArray", "[", 
+        RowBox[{"0", ",", "dim"}], "]"}], "}"}], "]"}], "]"}]}], ";"}], 
+  RowBox[{"(*", "Hyperparameter", "*)"}]}], "\[IndentingNewLine]", 
+ RowBox[{"\[Nu]0", "=", "10.", " ", 
+  RowBox[{"(*", "Hyperparameter", "*)"}]}]}], "Input",
+ CellChangeTimes->{{3.6755689343637953`*^9, 3.675568935316608*^9}, 
+   3.675594314157118*^9, {3.67559506406918*^9, 3.6755950650525503`*^9}, 
+   3.675596888564414*^9, {3.675598115406049*^9, 3.675598116601554*^9}, {
+   3.6756151801988707`*^9, 3.675615180643731*^9}, {3.6756217085603733`*^9, 
+   3.675621708841588*^9}, {3.6773018395230093`*^9, 3.67730187167801*^9}}],
 
+Cell[BoxData["10.`"], "Output",
+ CellChangeTimes->{3.677452052668152*^9, 3.677452348868952*^9}]
+}, Open  ]],
 
-(*Module*)
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"Vj", "=", 
+   RowBox[{
+   "Import", "[", "\"\</Users/mick/Desktop/PROJECT/ImportData/movie.csv\>\"", 
+    "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"Ui", "=", 
+   RowBox[{
+   "Import", "[", "\"\</Users/mick/Desktop/PROJECT/ImportData/user.csv\>\"", 
+    "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"matrixdata", "=", 
+   RowBox[{
+   "Import", "[", 
+    "\"\</Users/mick/Desktop/PROJECT/ImportData/netflixdata.csv\>\"", "]"}]}],
+   ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"probedata", "=", 
+   RowBox[{
+   "Import", "[", 
+    "\"\</Users/mick/Desktop/PROJECT/ImportData/probedata.csv\>\"", "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"traindata", "=", 
+   RowBox[{
+   "Import", "[", 
+    "\"\</Users/mick/Desktop/PROJECT/ImportData/traindata.csv\>\"", "]"}]}], 
+  ";"}]}], "Input",
+ CellChangeTimes->{{3.675617147143062*^9, 3.675617187463202*^9}, 
+   3.675622355331463*^9}],
 
-bArray = {};
-aArray = {};
-eArray = {};
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"spMD", "=", 
+    RowBox[{"SparseArray", "[", "matrixdata", "]"}]}], ";"}], 
+  "\[IndentingNewLine]"}]], "Input",
+ CellChangeTimes->{{3.6759046485205793`*^9, 3.675904662508497*^9}, {
+   3.675905460974844*^9, 3.675905461374774*^9}, {3.675906114557139*^9, 
+   3.675906116768095*^9}, {3.675988913417985*^9, 3.675988982166614*^9}, {
+   3.675989066563958*^9, 3.6759890913560057`*^9}, {3.675990280847921*^9, 
+   3.675990283862656*^9}, 3.6759908528278008`*^9, {3.6769919813811626`*^9, 
+   3.6769919825220757`*^9}}]
+}, Closed]],
 
-proball = Total[Vj[[aam]]*Ui[[aap]], {2}] + meanrating ;
-counterprobe = 1;
+Cell[CellGroupData[{
 
-Monitor[Do[
-    i\[CapitalLambda]v = i\[CapitalLambda]uv[Vj];
-    i\[Mu]v = i\[Mu]uv[Vj, i\[CapitalLambda]v];
-    
-    i\[CapitalLambda]u = i\[CapitalLambda]uv[Ui];
-    i\[Mu]u = i\[Mu]uv[Ui, i\[CapitalLambda]u];
-    
-    
-    Monitor[Do[
-      i\[CapitalLambda] = 
-       MapThread[\[CapitalLambda]covar, {AB, 
-         ConstantArray[i\[CapitalLambda]v, Dimensions[AB]]}];
-      i\[Lambda] = MapThread[CholeskyDecomposition, {i\[CapitalLambda]}];
-      i\[Alpha] = 
-       MapThread[\[Mu]mean, {i\[CapitalLambda], AB, rij, 
-         ConstantArray[i\[CapitalLambda]v, Dimensions[AB]], 
-         ConstantArray[i\[Mu]v, Dimensions[AB]]}];
-      Vj = MapThread[UVlat, {i\[Lambda], i\[Alpha]}];
-      
-      
-      i\[CapitalLambda] = 
-       MapThread[\[CapitalLambda]covar, {BA, 
-         ConstantArray[i\[CapitalLambda]u, Dimensions[BA]]}];
-      i\[Lambda] = MapThread[CholeskyDecomposition, {i\[CapitalLambda]}];
-      i\[Alpha] = 
-       MapThread[\[Mu]mean, {i\[CapitalLambda], BA, rij2, 
-         ConstantArray[i\[CapitalLambda]u, Dimensions[BA]], 
-         ConstantArray[i\[Mu]u, Dimensions[BA]]}];
-      Ui = MapThread[UVlat, {i\[Lambda], i\[Alpha]}];
-      
-      , {tt, 1, 2}(*Thining of 50%*)
-      
-      ], {tt, ProgressIndicator[tt, {1, 2}]}];
-    
-    AppendTo[bArray, Vj];
-    AppendTo[aArray, Ui];
-    
-    
-    prediction = Total[Vj[[vv]]*Ui[[uu]], {2}] + meanrating;
-    proball = (counterprobe*proball + prediction)/(counterprobe + 1);
-    counterprobe = counterprobe + 1;
-    rms = (ratings - proball)^2;
-    err = (Total[rms]/N[Length[probedata]])^(1/2);
-    AppendTo[eArray, err];
-    
-    ,
-    {t, 1, 5000}
-    
-    ], {t, ProgressIndicator[t, {1, 5000}]}]; // AbsoluteTiming
+Cell["Equations", "Section",
+ CellChangeTimes->{{3.463262046897688*^9, 3.463262064705757*^9}, 
+   3.677302232521078*^9}],
 
-(*Results and Graphs*)
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{
+   RowBox[{"uu", "=", 
+    RowBox[{"probedata", "[", 
+     RowBox[{"[", 
+      RowBox[{"All", ",", "1"}], "]"}], "]"}]}], ";"}], " ", 
+  RowBox[{"(*", 
+   RowBox[{
+   "list", " ", "users", " ", "in", " ", "probe", " ", "data", " ", "set"}], 
+   "*)"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"vv", "=", 
+    RowBox[{"probedata", "[", 
+     RowBox[{"[", 
+      RowBox[{"All", ",", "2"}], "]"}], "]"}]}], ";"}], 
+  RowBox[{"(*", 
+   RowBox[{
+   "list", " ", "of", " ", "rated", " ", "movies", " ", "in", " ", "probe", 
+    " ", "data", " ", "set"}], "*)"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"ratings", "=", 
+    RowBox[{"N", "[", 
+     RowBox[{"probedata", "[", 
+      RowBox[{"[", 
+       RowBox[{"All", ",", "3"}], "]"}], "]"}], "]"}]}], ";"}], " ", 
+  RowBox[{"(*", 
+   RowBox[{
+   "Rating", " ", "cooresponding", " ", "to", " ", "user", " ", "movie", " ", 
+    "combition"}], "*)"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"meanrating", "=", 
+   RowBox[{"N", "[", 
+    RowBox[{"Mean", "[", 
+     RowBox[{"traindata", "[", 
+      RowBox[{"[", 
+       RowBox[{"All", ",", "3"}], "]"}], "]"}], "]"}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"d", "=", 
+   RowBox[{
+    RowBox[{"Transpose", "[", "spMD", "]"}], "[", "\"\<AdjacencyLists\>\"", 
+    "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"c", "=", 
+   RowBox[{"spMD", "[", "\"\<AdjacencyLists\>\"", "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"rij", "=", 
+   RowBox[{"ReplaceAll", "[", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"DeleteCases", "[", "0", "]"}], "/@", 
+      RowBox[{"Transpose", "[", "matrixdata", "]"}]}], ",", 
+     RowBox[{
+      RowBox[{"{", "}"}], "\[Rule]", 
+      RowBox[{"ConstantArray", "[", 
+       RowBox[{"0", ",", "1"}], "]"}]}]}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"rij2", "=", 
+   RowBox[{"Select", "[", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"DeleteCases", "[", "0", "]"}], "/@", "matrixdata"}], ",", 
+     RowBox[{
+      RowBox[{"UnsameQ", "[", 
+       RowBox[{"#", ",", 
+        RowBox[{"{", "}"}]}], "]"}], "&"}]}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"AB", "[", "iAB_", "]"}], ":=", 
+  RowBox[{"ReplaceAll", "[", 
+   RowBox[{
+    RowBox[{"Map", "[", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"(", 
+        RowBox[{"iAB", "[", 
+         RowBox[{"[", 
+          RowBox[{"#", ",", "All"}], "]"}], "]"}], ")"}], "&"}], ",", "d"}], 
+     "]"}], ",", 
+    RowBox[{
+     RowBox[{"{", "}"}], "\[Rule]", 
+     RowBox[{"ConstantArray", "[", 
+      RowBox[{"0", ",", 
+       RowBox[{"{", 
+        RowBox[{"1", ",", "dim"}], "}"}]}], "]"}]}]}], 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"BA", "[", "iAB_", "]"}], ":=", 
+  RowBox[{"Map", "[", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{"iAB", "[", 
+       RowBox[{"[", 
+        RowBox[{"#", ",", "All"}], "]"}], "]"}], ")"}], "&"}], ",", "c"}], 
+   "]"}]}]}], "Input",
+ CellChangeTimes->{{3.675617207380843*^9, 3.67561720739174*^9}, 
+   3.6756223635117188`*^9, {3.6769910356149263`*^9, 3.67699103635528*^9}, {
+   3.677299974766848*^9, 3.677299976744492*^9}, {3.6773000161425858`*^9, 
+   3.677300055429532*^9}, {3.677301773901546*^9, 3.6773018119997177`*^9}, {
+   3.677301893725472*^9, 3.677302006012793*^9}, {3.677302036560318*^9, 
+   3.6773020370477533`*^9}, 3.6774519258235283`*^9}],
 
-ListPlot[eArray]
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{
+   RowBox[{"iW", "[", "iAB_", "]"}], ":=", 
+   RowBox[{"With", "[", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"Nuv", "=", 
+        RowBox[{"N", "[", 
+         RowBox[{"Length", "[", "iAB", "]"}], "]"}]}], ",", 
+       RowBox[{"Suv", "=", 
+        RowBox[{"N", "[", 
+         RowBox[{"Covariance", "[", "iAB", "]"}], "]"}]}], ",", 
+       RowBox[{"Xuv", "=", 
+        RowBox[{"N", "[", 
+         RowBox[{"Transpose", "[", 
+          RowBox[{"{", 
+           RowBox[{"Mean", "[", "iAB", "]"}], "}"}], "]"}], "]"}]}]}], "}"}], 
+     ",", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{"Inverse", "[", 
+         RowBox[{
+          RowBox[{"Inverse", "[", "W0", "]"}], "+", 
+          RowBox[{"Nuv", " ", "Suv"}], "+", 
+          RowBox[{
+           FractionBox[
+            RowBox[{"\[Beta]0", " ", "Nuv"}], 
+            RowBox[{"\[Beta]0", "+", "Nuv"}]], "*", 
+           RowBox[{
+            RowBox[{"(", 
+             RowBox[{"\[Mu]0", "-", "Xuv"}], ")"}], ".", 
+            RowBox[{"Transpose", "[", 
+             RowBox[{"\[Mu]0", "-", "Xuv"}], "]"}]}]}]}], "]"}], "+", 
+        RowBox[{"Transpose", "[", 
+         RowBox[{"Inverse", "[", 
+          RowBox[{
+           RowBox[{"Inverse", "[", "W0", "]"}], "+", 
+           RowBox[{"Nuv", " ", "Suv"}], "+", 
+           RowBox[{
+            FractionBox[
+             RowBox[{"\[Beta]0", " ", "Nuv"}], 
+             RowBox[{"\[Beta]0", "+", "Nuv"}]], "*", 
+            RowBox[{
+             RowBox[{"(", 
+              RowBox[{"\[Mu]0", "-", "Xuv"}], ")"}], ".", 
+             RowBox[{"Transpose", "[", 
+              RowBox[{"\[Mu]0", "-", "Xuv"}], "]"}]}]}]}], "]"}], "]"}]}], 
+       ")"}], "/", "2"}]}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"iL", "[", 
+   RowBox[{"iAB_", ",", "\[CapitalLambda]_"}], "]"}], ":=", 
+  RowBox[{"Transpose", "[", 
+   RowBox[{"CholeskyDecomposition", "[", 
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{
+       RowBox[{"Inverse", "[", 
+        RowBox[{
+         RowBox[{"(", 
+          RowBox[{"\[Beta]0", "+", 
+           RowBox[{"N", "[", 
+            RowBox[{"Length", "[", "iAB", "]"}], "]"}]}], ")"}], "*", 
+         "\[CapitalLambda]"}], "]"}], "+", 
+       RowBox[{"Transpose", "[", 
+        RowBox[{"Inverse", "[", 
+         RowBox[{
+          RowBox[{"(", 
+           RowBox[{"\[Beta]0", "+", 
+            RowBox[{"N", "[", 
+             RowBox[{"Length", "[", "iAB", "]"}], "]"}]}], ")"}], "*", 
+          "\[CapitalLambda]"}], "]"}], "]"}]}], ")"}], "/", "2"}], "]"}], 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"i\[CapitalLambda]uv", "[", "iAB_", "]"}], ":=", 
+  RowBox[{"With", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"W", "=", 
+       RowBox[{"iW", "[", "iAB", "]"}]}], ",", 
+      RowBox[{"\[Nu]", "=", 
+       RowBox[{"\[Nu]0", "+", 
+        RowBox[{"N", "[", 
+         RowBox[{"Length", "[", "iAB", "]"}], "]"}]}]}]}], "}"}], ",", 
+    RowBox[{"RandomVariate", "[", 
+     RowBox[{"WishartDistribution", "[", 
+      RowBox[{"W", ",", "\[Nu]"}], "]"}], "]"}]}], 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"i\[Mu]uv", "[", 
+   RowBox[{"iAB_", ",", "\[CapitalLambda]_"}], "]"}], ":=", 
+  RowBox[{"With", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"L", "=", 
+       RowBox[{"iL", "[", 
+        RowBox[{"iAB", ",", "\[CapitalLambda]"}], "]"}]}], ",", 
+      RowBox[{"\[Mu]", "=", 
+       FractionBox[
+        RowBox[{
+         RowBox[{"\[Beta]0", " ", "\[Mu]0"}], "+", 
+         RowBox[{
+          RowBox[{"N", "[", 
+           RowBox[{"Length", "[", "iAB", "]"}], "]"}], " ", 
+          RowBox[{"N", "[", 
+           RowBox[{"Transpose", "[", 
+            RowBox[{"{", 
+             RowBox[{"Mean", "[", "iAB", "]"}], "}"}], "]"}], "]"}]}]}], 
+        RowBox[{"\[Beta]0", "+", 
+         RowBox[{"N", "[", 
+          RowBox[{"Length", "[", "iAB", "]"}], "]"}]}]]}]}], "}"}], ",", 
+    RowBox[{"\[Mu]", "+", 
+     RowBox[{"L", ".", 
+      RowBox[{"RandomVariate", "[", 
+       RowBox[{
+        RowBox[{"NormalDistribution", "[", 
+         RowBox[{"0", ",", "1"}], "]"}], ",", "dim"}], "]"}]}]}]}], 
+   "]"}]}]}], "Input",
+ CellChangeTimes->{{3.675561511489963*^9, 3.675561564224601*^9}, {
+   3.675561598493785*^9, 3.675561669776761*^9}, {3.6755620512388268`*^9, 
+   3.675562075484551*^9}, 3.6755621129883013`*^9, {3.675562203458021*^9, 
+   3.675562353104439*^9}, 3.675562898314848*^9, {3.675569961508194*^9, 
+   3.675569982947605*^9}, 3.67557597283624*^9, {3.675576010567584*^9, 
+   3.675576034479562*^9}, {3.6755761028290997`*^9, 3.675576121577531*^9}}],
 
-fu[x_, y_] := {aArray[[x]][[y]]}.Transpose[{aArray[[x]][[y]]}]
-fv[x_, y_] := {bArray[[x]][[y]]}.Transpose[{bArray[[x]][[y]]}]
+Cell[BoxData[
+ RowBox[{"\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"\[Mu]mean", "[", 
+     RowBox[{
+     "\[CapitalLambda]_", ",", "uv_", ",", "r_", ",", "\[CapitalLambda]C_", 
+      ",", "\[Mu]C_"}], "]"}], ":=", 
+    RowBox[{"\[CapitalLambda]", ".", 
+     RowBox[{"(", 
+      RowBox[{
+       RowBox[{"\[Beta]0", "*", 
+        RowBox[{
+         RowBox[{"Transpose", "[", "uv", "]"}], ".", 
+         RowBox[{"(", 
+          RowBox[{"r", "-", "meanrating"}], ")"}]}]}], "+", 
+       RowBox[{"\[CapitalLambda]C", ".", "\[Mu]C"}]}], ")"}]}]}], 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"\[CapitalLambda]covar", "[", 
+     RowBox[{"uv_", ",", "\[CapitalLambda]C_"}], "]"}], ":=", 
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{
+       RowBox[{"Inverse", "[", 
+        RowBox[{"\[CapitalLambda]C", "+", 
+         RowBox[{"\[Beta]0", "*", 
+          RowBox[{
+           RowBox[{"Transpose", "[", "uv", "]"}], ".", "uv"}]}]}], "]"}], "+", 
+       RowBox[{"Transpose", "[", 
+        RowBox[{"Inverse", "[", 
+         RowBox[{"\[CapitalLambda]C", "+", 
+          RowBox[{"\[Beta]0", "*", 
+           RowBox[{
+            RowBox[{"Transpose", "[", "uv", "]"}], ".", "uv"}]}]}], "]"}], 
+        "]"}]}], ")"}], "/", "2"}]}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"UVlat", "[", 
+     RowBox[{"\[Lambda]_", ",", "\[Mu]m_"}], "]"}], ":=", 
+    RowBox[{"Flatten", "[", 
+     RowBox[{
+      RowBox[{"\[Lambda]", ".", 
+       RowBox[{"RandomVariate", "[", 
+        RowBox[{
+         RowBox[{"NormalDistribution", "[", 
+          RowBox[{"0", ",", "1"}], "]"}], ",", "dim"}], "]"}]}], "+", 
+      "\[Mu]m"}], "]"}]}], "\[IndentingNewLine]"}]}]], "Input",
+ CellChangeTimes->{{3.6755632164337463`*^9, 3.675563258123753*^9}, {
+   3.6755636134640102`*^9, 3.675563705889222*^9}, {3.6755650768073893`*^9, 
+   3.675565077376161*^9}, {3.675566968444826*^9, 3.675566969986998*^9}, {
+   3.675567703813875*^9, 3.675567704722*^9}, {3.6755685377556047`*^9, 
+   3.675568538733447*^9}, 3.6755695588960857`*^9, 3.675569980237587*^9, {
+   3.6769971678234386`*^9, 3.676997172018341*^9}, {3.677302071981722*^9, 
+   3.6773020725413227`*^9}}]
+}, Closed]],
 
+Cell[CellGroupData[{
 
-udata = Flatten[Table[fu[x, 1], {x, 1, 300}]];
-ListLinePlot[udata]
+Cell["Module", "Section",
+ CellChangeTimes->{{3.463262094674903*^9, 3.46326209558585*^9}}],
 
-vdata = Flatten[Table[fv[x, 1], {x, 1, 300}]];
-ListLinePlot[vdata]
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"Gibbs", "[", 
+   RowBox[{"data0_", ",", "initU0_", ",", "initV0_", ",", "iterations_"}], 
+   "]"}], ":=", "\[IndentingNewLine]", 
+  RowBox[{"Block", "[", "\[IndentingNewLine]", "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"initU", "=", "initU0"}], ",", "\[IndentingNewLine]", 
+      RowBox[{"initV", "=", "initV0"}], ",", "\[IndentingNewLine]", 
+      RowBox[{"data", "=", "data0"}], ",", "\[IndentingNewLine]", 
+      RowBox[{"ii", "=", "iterations"}], ",", "\[IndentingNewLine]", 
+      "i\[CapitalLambda]u", ",", "i\[CapitalLambda]v", ",", "iAB", ",", 
+      "i\[Mu]u", ",", "i\[Mu]v", ",", "iU0", ",", "iV0", ",", 
+      "i\[CapitalLambda]", ",", "i\[Alpha]", ",", "i\[Lambda]", ",", "id", 
+      ",", "prediction", ",", "proball", ",", "counterprobe", ",", "rms"}], 
+     "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"iU0", "=", "initU"}], ";", "\[IndentingNewLine]", 
+     RowBox[{"iV0", "=", "initV"}], ";", "\[IndentingNewLine]", 
+     "\[IndentingNewLine]", 
+     RowBox[{"bArray", "=", 
+      RowBox[{"{", "}"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"aArray", "=", 
+      RowBox[{"{", "}"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"eArray", "=", 
+      RowBox[{"{", "}"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"proball", "=", 
+      RowBox[{
+       RowBox[{"Total", "[", 
+        RowBox[{
+         RowBox[{
+          RowBox[{"iV0", "[", 
+           RowBox[{"[", "vv", "]"}], "]"}], "*", 
+          RowBox[{"iU0", "[", 
+           RowBox[{"[", "uu", "]"}], "]"}]}], ",", 
+         RowBox[{"{", "2", "}"}]}], "]"}], "+", "meanrating"}]}], " ", ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"counterprobe", "=", "1"}], ";", "\[IndentingNewLine]", 
+     "\[IndentingNewLine]", "\[IndentingNewLine]", 
+     RowBox[{"Monitor", "[", 
+      RowBox[{
+       RowBox[{"Do", "[", "\[IndentingNewLine]", 
+        RowBox[{
+         RowBox[{
+          RowBox[{"i\[CapitalLambda]v", "=", 
+           RowBox[{"i\[CapitalLambda]uv", "[", "iV0", "]"}]}], ";", 
+          "\[IndentingNewLine]", 
+          RowBox[{"i\[Mu]v", "=", 
+           RowBox[{"i\[Mu]uv", "[", 
+            RowBox[{"iV0", ",", "i\[CapitalLambda]v"}], "]"}]}], ";", 
+          "\[IndentingNewLine]", "\[IndentingNewLine]", 
+          RowBox[{"i\[CapitalLambda]u", "=", 
+           RowBox[{"i\[CapitalLambda]uv", "[", "iU0", "]"}]}], ";", 
+          "\[IndentingNewLine]", 
+          RowBox[{"i\[Mu]u", "=", 
+           RowBox[{"i\[Mu]uv", "[", 
+            RowBox[{"iU0", ",", "i\[CapitalLambda]u"}], "]"}]}], ";", 
+          "\[IndentingNewLine]", "\[IndentingNewLine]", "\[IndentingNewLine]", 
+          RowBox[{"Monitor", "[", 
+           RowBox[{
+            RowBox[{"Do", "[", "\[IndentingNewLine]", 
+             RowBox[{
+              RowBox[{
+               RowBox[{"iAB", "=", 
+                RowBox[{"AB", "[", "Ui", "]"}]}], ";", "\[IndentingNewLine]", 
+               
+               RowBox[{"i\[CapitalLambda]", "=", 
+                RowBox[{"MapThread", "[", 
+                 RowBox[{"\[CapitalLambda]covar", ",", 
+                  RowBox[{"{", 
+                   RowBox[{"iAB", ",", 
+                    RowBox[{"ConstantArray", "[", 
+                    RowBox[{"i\[CapitalLambda]v", ",", 
+                    RowBox[{"Dimensions", "[", "iAB", "]"}]}], "]"}]}], 
+                   "}"}]}], "]"}]}], ";", "\[IndentingNewLine]", 
+               RowBox[{"i\[Lambda]", "=", 
+                RowBox[{"MapThread", "[", 
+                 RowBox[{"CholeskyDecomposition", ",", 
+                  RowBox[{"{", "i\[CapitalLambda]", "}"}]}], "]"}]}], ";", 
+               "\[IndentingNewLine]", 
+               RowBox[{"i\[Alpha]", "=", 
+                RowBox[{"MapThread", "[", 
+                 RowBox[{"\[Mu]mean", ",", 
+                  RowBox[{"{", 
+                   RowBox[{"i\[CapitalLambda]", ",", "iAB", ",", "rij", ",", 
+                    RowBox[{"ConstantArray", "[", 
+                    RowBox[{"i\[CapitalLambda]v", ",", 
+                    RowBox[{"Dimensions", "[", "iAB", "]"}]}], "]"}], ",", 
+                    RowBox[{"ConstantArray", "[", 
+                    RowBox[{"i\[Mu]v", ",", 
+                    RowBox[{"Dimensions", "[", "iAB", "]"}]}], "]"}]}], 
+                   "}"}]}], "]"}]}], ";", "\[IndentingNewLine]", 
+               RowBox[{"iV0", "=", 
+                RowBox[{"MapThread", "[", 
+                 RowBox[{"UVlat", ",", 
+                  RowBox[{"{", 
+                   RowBox[{"i\[Lambda]", ",", "i\[Alpha]"}], "}"}]}], "]"}]}],
+                ";", "\[IndentingNewLine]", "\[IndentingNewLine]", 
+               RowBox[{"iAB", "=", 
+                RowBox[{"BA", "[", "Vj", "]"}]}], ";", "\[IndentingNewLine]", 
+               
+               RowBox[{"i\[CapitalLambda]", "=", 
+                RowBox[{"MapThread", "[", 
+                 RowBox[{"\[CapitalLambda]covar", ",", 
+                  RowBox[{"{", 
+                   RowBox[{"iAB", ",", 
+                    RowBox[{"ConstantArray", "[", 
+                    RowBox[{"i\[CapitalLambda]u", ",", 
+                    RowBox[{"Dimensions", "[", "iAB", "]"}]}], "]"}]}], 
+                   "}"}]}], "]"}]}], ";", "\[IndentingNewLine]", 
+               RowBox[{"i\[Lambda]", "=", 
+                RowBox[{"MapThread", "[", 
+                 RowBox[{"CholeskyDecomposition", ",", 
+                  RowBox[{"{", "i\[CapitalLambda]", "}"}]}], "]"}]}], ";", 
+               "\[IndentingNewLine]", 
+               RowBox[{"i\[Alpha]", "=", 
+                RowBox[{"MapThread", "[", 
+                 RowBox[{"\[Mu]mean", ",", 
+                  RowBox[{"{", 
+                   RowBox[{
+                   "i\[CapitalLambda]", ",", "iAB", ",", "rij2", ",", 
+                    RowBox[{"ConstantArray", "[", 
+                    RowBox[{"i\[CapitalLambda]u", ",", 
+                    RowBox[{"Dimensions", "[", "iAB", "]"}]}], "]"}], ",", 
+                    RowBox[{"ConstantArray", "[", 
+                    RowBox[{"i\[Mu]u", ",", 
+                    RowBox[{"Dimensions", "[", "iAB", "]"}]}], "]"}]}], 
+                   "}"}]}], "]"}]}], ";", "\[IndentingNewLine]", 
+               RowBox[{"iU0", "=", 
+                RowBox[{"MapThread", "[", 
+                 RowBox[{"UVlat", ",", 
+                  RowBox[{"{", 
+                   RowBox[{"i\[Lambda]", ",", "i\[Alpha]"}], "}"}]}], "]"}]}],
+                ";"}], "\[IndentingNewLine]", "\[IndentingNewLine]", ",", 
+              RowBox[{"{", 
+               RowBox[{"tt", ",", "1", ",", "2"}], "}"}]}], 
+             RowBox[{"(*", 
+              RowBox[{"Thining", " ", "of", " ", "50", "%"}], "*)"}], 
+             "\[IndentingNewLine]", "\[IndentingNewLine]", "]"}], ",", 
+            RowBox[{"{", 
+             RowBox[{"tt", ",", 
+              RowBox[{"ProgressIndicator", "[", 
+               RowBox[{"tt", ",", 
+                RowBox[{"{", 
+                 RowBox[{"1", ",", "2"}], "}"}]}], "]"}]}], "}"}]}], "]"}], 
+          ";", "\[IndentingNewLine]", "\[IndentingNewLine]", 
+          RowBox[{"AppendTo", "[", 
+           RowBox[{"bArray", ",", "iV0"}], "]"}], ";", "\[IndentingNewLine]", 
+          
+          RowBox[{"AppendTo", "[", 
+           RowBox[{"aArray", ",", "iU0"}], "]"}], ";", "\[IndentingNewLine]", 
+          "\[IndentingNewLine]", "\[IndentingNewLine]", 
+          RowBox[{"prediction", "=", 
+           RowBox[{
+            RowBox[{"Total", "[", 
+             RowBox[{
+              RowBox[{
+               RowBox[{"iV0", "[", 
+                RowBox[{"[", "vv", "]"}], "]"}], "*", 
+               RowBox[{"iU0", "[", 
+                RowBox[{"[", "uu", "]"}], "]"}]}], ",", 
+              RowBox[{"{", "2", "}"}]}], "]"}], "+", "meanrating"}]}], ";", 
+          "\[IndentingNewLine]", 
+          RowBox[{"proball", "=", 
+           FractionBox[
+            RowBox[{"(", 
+             RowBox[{
+              RowBox[{"counterprobe", "*", "proball"}], "+", "prediction"}], 
+             ")"}], 
+            RowBox[{"counterprobe", "+", "1"}]]}], ";", "\[IndentingNewLine]", 
+          RowBox[{"counterprobe", "=", 
+           RowBox[{"counterprobe", "+", "1"}]}], ";", "\[IndentingNewLine]", 
+          RowBox[{"rms", "=", 
+           RowBox[{
+            RowBox[{"(", 
+             RowBox[{"ratings", "-", "proball"}], ")"}], "^", "2"}]}], ";", 
+          "\[IndentingNewLine]", 
+          RowBox[{"err", "=", 
+           RowBox[{
+            RowBox[{"(", 
+             RowBox[{
+              RowBox[{"Total", "[", "rms", "]"}], "/", 
+              RowBox[{"N", "[", 
+               RowBox[{"Length", "[", "probedata", "]"}], "]"}]}], ")"}], "^", 
+            RowBox[{"(", 
+             RowBox[{"1", "/", "2"}], ")"}]}]}], ";", "\[IndentingNewLine]", 
+          RowBox[{"AppendTo", "[", 
+           RowBox[{"eArray", ",", "err"}], "]"}], ";"}], 
+         "\[IndentingNewLine]", "\[IndentingNewLine]", ",", 
+         "\[IndentingNewLine]", 
+         RowBox[{"{", 
+          RowBox[{"t", ",", "1", ",", "ii"}], "}"}]}], "\[IndentingNewLine]", 
+        "\[IndentingNewLine]", "]"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"t", ",", 
+         RowBox[{"ProgressIndicator", "[", 
+          RowBox[{"t", ",", 
+           RowBox[{"{", 
+            RowBox[{"1", ",", "ii"}], "}"}]}], "]"}]}], "}"}]}], "]"}], 
+     ";"}]}], "\[IndentingNewLine]", "]"}]}]], "Input",
+ CellChangeTimes->{{3.675569180487651*^9, 3.675569189075178*^9}, {
+  3.6755954218317747`*^9, 3.6755954390475082`*^9}, {3.6756257135063334`*^9, 
+  3.6756257142908*^9}, {3.676998041440196*^9, 3.676998047441568*^9}, {
+  3.677346218389162*^9, 3.677346294860765*^9}, {3.677346327709652*^9, 
+  3.677346345178948*^9}, {3.67734638606323*^9, 3.677346398902708*^9}, {
+  3.6773464292343187`*^9, 3.677346613632532*^9}, {3.677346645399932*^9, 
+  3.677346651003334*^9}, {3.6774519417597437`*^9, 3.677451999275001*^9}, {
+  3.677452053382195*^9, 3.67745217167311*^9}, {3.677452218274733*^9, 
+  3.677452254867447*^9}, {3.677452319833024*^9, 3.677452322289011*^9}}],
 
-ui[x_, y_, z_] := aArray[[x]][[y]][[z]]
-vi[x_, y_, z_] := bArray[[x]][[y]][[z]]
+Cell[CellGroupData[{
 
-Histogram[Table[vi[x, 2567, 1], {x, 400, 3000}], 40]
+Cell[BoxData[""], "Input",
+ CellChangeTimes->{{3.6756225646184483`*^9, 3.675622569555566*^9}, {
+   3.6769910645687513`*^9, 3.676991068518539*^9}, 3.677346385280531*^9}],
 
-Histogram3D[Table[vi[x, 323, {3, 4}], {x, 800, 1800}], 60]
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+  "16781.060029000000213272869586944580078125`10.245419304230282", ",", 
+   "Null"}], "}"}]], "Output",
+ CellChangeTimes->{
+  3.6756221481588573`*^9, 3.6756224841097383`*^9, 3.675622693181834*^9, {
+   3.675625735796129*^9, 3.675625756223528*^9}, 3.6756260437315207`*^9, {
+   3.675631274216255*^9, 3.675631290158883*^9}, 3.67590338539847*^9, 
+   3.675903452513435*^9, 3.675903998971307*^9, 3.675990365465591*^9, 
+   3.675990519986526*^9, 3.675995475518351*^9, {3.67599965964154*^9, 
+   3.675999673208536*^9}, 3.675999863833686*^9, {3.676045852770164*^9, 
+   3.676045877463678*^9}, 3.67604611578163*^9, 3.6760476983580008`*^9, 
+   3.676047917932438*^9, 3.6760482057370787`*^9, 3.6769878970997753`*^9, 
+   3.676988016894245*^9, 3.676988178597844*^9, 3.676988317215913*^9, 
+   3.676989926863402*^9, 3.676990103426283*^9, 3.6769903348900623`*^9, 
+   3.676990988464281*^9, 3.6769910770251207`*^9, 3.676992049026629*^9, 
+   3.676993069089313*^9, 3.6769932291184807`*^9, 3.676997254156179*^9, 
+   3.676997311697493*^9, 3.67699740181185*^9, 3.6769975158505917`*^9, 
+   3.676997570497292*^9, 3.6769979379886837`*^9, 3.677015038388672*^9}]
+}, Open  ]]
+}, Closed]],
 
-cosine[x1_, 
-  x2_] := {iVArray[[1800]][[x1]]}.Transpose[{iVArray[[1800]][[x2]]}]/(Norm[
-     iVArray[[1800]][[x1]]] Norm[iVArray[[1800]][[x2]]])
+Cell[CellGroupData[{
+
+Cell["Run", "Section",
+ CellChangeTimes->{{3.677452188886826*^9, 3.677452191503871*^9}}],
+
+Cell["Gibbs[Matrix Data, Prior U, Prior V, Iterations]", "Text",
+ CellChangeTimes->{{3.677452422641776*^9, 3.6774524520900373`*^9}}],
+
+Cell[BoxData[
+ RowBox[{"Gibbs", "[", 
+  RowBox[{"matrixdata", ",", "Ui", ",", "Vj", ",", "2"}], "]"}]], "Input",
+ CellChangeTimes->{{3.677452262713455*^9, 3.6774522755762157`*^9}}]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["Results and Graphs", "Section",
+ CellChangeTimes->{{3.463262654844103*^9, 3.463262656760725*^9}, {
+  3.6773021143491707`*^9, 3.677302123777054*^9}}],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ListPlot", "[", "eArray", "]"}]], "Input",
+ CellChangeTimes->{{3.6770339267065067`*^9, 3.677033935165792*^9}, {
+  3.677034732342886*^9, 3.677034735923809*^9}, {3.677035086473555*^9, 
+  3.677035098426695*^9}}],
+
+Cell[BoxData[
+ GraphicsBox[{{}, {{}, 
+    {RGBColor[0.368417, 0.506779, 0.709798], PointSize[0.019444444444444445`],
+      AbsoluteThickness[1.6], 
+     PointBox[{{1., 0.8622568914271209}, {2., 0.8600837825296395}}]}, {}}, {}},
+  AspectRatio->NCache[GoldenRatio^(-1), 0.6180339887498948],
+  Axes->{True, True},
+  AxesLabel->{None, None},
+  AxesOrigin->{0, 0.8599751270847655},
+  DisplayFunction->Identity,
+  Frame->{{False, False}, {False, False}},
+  FrameLabel->{{None, None}, {None, None}},
+  FrameTicks->{{Automatic, Automatic}, {Automatic, Automatic}},
+  GridLines->{None, None},
+  GridLinesStyle->Directive[
+    GrayLevel[0.5, 0.4]],
+  Method->{},
+  PlotRange->{{0., 2.}, {0.8600837825296395, 0.8622568914271209}},
+  PlotRangeClipping->True,
+  PlotRangePadding->{{
+     Scaled[0.02], 
+     Scaled[0.02]}, {
+     Scaled[0.05], 
+     Scaled[0.05]}},
+  Ticks->{Automatic, Automatic}]], "Output",
+ CellChangeTimes->{
+  3.6770339362751102`*^9, {3.677035087744801*^9, 3.677035098892396*^9}, 
+   3.677452456683957*^9}]
+}, Open  ]],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"fu", "[", 
+   RowBox[{"x_", ",", "y_"}], "]"}], ":=", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"aArray", "[", 
+      RowBox[{"[", "x", "]"}], "]"}], "[", 
+     RowBox[{"[", "y", "]"}], "]"}], "}"}], ".", 
+   RowBox[{"Transpose", "[", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"aArray", "[", 
+       RowBox[{"[", "x", "]"}], "]"}], "[", 
+      RowBox[{"[", "y", "]"}], "]"}], "}"}], "]"}]}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"fv", "[", 
+   RowBox[{"x_", ",", "y_"}], "]"}], ":=", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"bArray", "[", 
+      RowBox[{"[", "x", "]"}], "]"}], "[", 
+     RowBox[{"[", "y", "]"}], "]"}], "}"}], ".", 
+   RowBox[{"Transpose", "[", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"bArray", "[", 
+       RowBox[{"[", "x", "]"}], "]"}], "[", 
+      RowBox[{"[", "y", "]"}], "]"}], "}"}], 
+    "]"}]}]}], "\[IndentingNewLine]"}], "Input",
+ CellChangeTimes->{{3.675570542551162*^9, 3.675570568448998*^9}, {
+   3.6755730520181017`*^9, 3.67557305488651*^9}, {3.6755733626261873`*^9, 
+   3.675573387811181*^9}, {3.6755769959487658`*^9, 3.6755769966742973`*^9}, 
+   3.675577488091485*^9, {3.677034783182357*^9, 3.6770347945925922`*^9}, {
+   3.677034872899252*^9, 3.677034895704748*^9}}],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"vdata", "=", 
+   RowBox[{"Flatten", "[", 
+    RowBox[{"Table", "[", 
+     RowBox[{
+      RowBox[{"fv", "[", 
+       RowBox[{"x", ",", "1"}], "]"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"x", ",", "1", ",", "300"}], "}"}]}], "]"}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"ListLinePlot", "[", "vdata", "]"}]}], "Input",
+ CellChangeTimes->{{3.6770349456606693`*^9, 3.677034952074724*^9}, 
+   3.67703516274185*^9}],
+
+Cell[BoxData[
+ GraphicsBox[{{}, {{}, {}, 
+    {RGBColor[0.368417, 0.506779, 0.709798], PointSize[0.011111111111111112`],
+      AbsoluteThickness[1.6], LineBox[CompressedData["
+1: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
+      "]]}}, {}},
+  AspectRatio->NCache[GoldenRatio^(-1), 0.6180339887498948],
+  Axes->{True, True},
+  AxesLabel->{None, None},
+  AxesOrigin->{0, 1.8029920379281688`},
+  DisplayFunction->Identity,
+  Frame->{{False, False}, {False, False}},
+  FrameLabel->{{None, None}, {None, None}},
+  FrameTicks->{{Automatic, Automatic}, {Automatic, Automatic}},
+  GridLines->{None, None},
+  GridLinesStyle->Directive[
+    GrayLevel[0.5, 0.4]],
+  Method->{},
+  PlotRange->{{0., 300.}, {1.8345100736449234`, 2.464870787980014}},
+  PlotRangeClipping->True,
+  PlotRangePadding->{{
+     Scaled[0.02], 
+     Scaled[0.02]}, {
+     Scaled[0.05], 
+     Scaled[0.05]}},
+  Ticks->{Automatic, Automatic}]], "Output",
+ CellChangeTimes->{3.6770349626448917`*^9, 3.677035163925661*^9}]
+}, Open  ]],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"ui", "[", 
+   RowBox[{"x_", ",", "y_", ",", "z_"}], "]"}], ":=", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"aArray", "[", 
+     RowBox[{"[", "x", "]"}], "]"}], "[", 
+    RowBox[{"[", "y", "]"}], "]"}], "[", 
+   RowBox[{"[", "z", "]"}], "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"vi", "[", 
+   RowBox[{"x_", ",", "y_", ",", "z_"}], "]"}], ":=", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"bArray", "[", 
+     RowBox[{"[", "x", "]"}], "]"}], "[", 
+    RowBox[{"[", "y", "]"}], "]"}], "[", 
+   RowBox[{"[", "z", "]"}], "]"}]}]}], "Input",
+ CellChangeTimes->{{3.675573311761272*^9, 3.6755733125543747`*^9}, {
+  3.677034979753015*^9, 3.6770349891556587`*^9}}],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"Histogram", "[", 
+  RowBox[{
+   RowBox[{"Table", "[", 
+    RowBox[{
+     RowBox[{"vi", "[", 
+      RowBox[{"x", ",", "2567", ",", "1"}], "]"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"x", ",", "400", ",", "3000"}], "}"}]}], "]"}], ",", "40"}], 
+  "]"}]], "Input",
+ CellChangeTimes->{{3.675573329223185*^9, 3.675573330961616*^9}, {
+  3.675577532315209*^9, 3.675577551518203*^9}, {3.675592707441449*^9, 
+  3.6755927296058893`*^9}, {3.675592889311472*^9, 3.6755929107661133`*^9}, {
+  3.677035002335992*^9, 3.677035008627264*^9}}],
+
+Cell[BoxData[
+ GraphicsBox[{
+   {RGBColor[0.987148, 0.8073604000000001, 0.49470040000000004`], EdgeForm[{
+    Opacity[0.34299999999999997`], Thickness[Small]}], {}, 
+    {RGBColor[0.987148, 0.8073604000000001, 0.49470040000000004`], EdgeForm[{
+     Opacity[0.34299999999999997`], Thickness[Small]}], 
+     RectangleBox[{-0.48, 0}, {-0.46, 1},
+      RoundingRadius->0], RectangleBox[{-0.46, 0}, {-0.44, 2},
+      RoundingRadius->0], RectangleBox[{-0.44, 0}, {-0.42, 1},
+      RoundingRadius->0], RectangleBox[{-0.42, 0}, {-0.4, 1},
+      RoundingRadius->0], RectangleBox[{-0.4, 0}, {-0.38, 3},
+      RoundingRadius->0], RectangleBox[{-0.38, 0}, {-0.36, 8},
+      RoundingRadius->0], RectangleBox[{-0.36, 0}, {-0.34, 17},
+      RoundingRadius->0], RectangleBox[{-0.34, 0}, {-0.32, 8},
+      RoundingRadius->0], RectangleBox[{-0.32, 0}, {-0.3, 15},
+      RoundingRadius->0], RectangleBox[{-0.3, 0}, {-0.28, 28},
+      RoundingRadius->0], RectangleBox[{-0.28, 0}, {-0.26, 26},
+      RoundingRadius->0], RectangleBox[{-0.26, 0}, {-0.24, 28},
+      RoundingRadius->0], RectangleBox[{-0.24, 0}, {-0.22, 50},
+      RoundingRadius->0], RectangleBox[{-0.22, 0}, {-0.2, 55},
+      RoundingRadius->0], RectangleBox[{-0.2, 0}, {-0.18, 74},
+      RoundingRadius->0], RectangleBox[{-0.18, 0}, {-0.16, 77},
+      RoundingRadius->0], RectangleBox[{-0.16, 0}, {-0.14, 105},
+      RoundingRadius->0], RectangleBox[{-0.14, 0}, {-0.12, 126},
+      RoundingRadius->0], RectangleBox[{-0.12, 0}, {-0.1, 116},
+      RoundingRadius->0], RectangleBox[{-0.1, 0}, {-0.08, 137},
+      RoundingRadius->0], RectangleBox[{-0.08, 0}, {-0.06, 177},
+      RoundingRadius->0], RectangleBox[{-0.06, 0}, {-0.04, 144},
+      RoundingRadius->0], RectangleBox[{-0.04, 0}, {-0.02, 148},
+      RoundingRadius->0], RectangleBox[{-0.02, 0}, {0., 154},
+      RoundingRadius->0], RectangleBox[{0., 0}, {0.02, 154},
+      RoundingRadius->0], RectangleBox[{0.02, 0}, {0.04, 133},
+      RoundingRadius->0], RectangleBox[{0.04, 0}, {0.06, 120},
+      RoundingRadius->0], RectangleBox[{0.06, 0}, {0.08, 119},
+      RoundingRadius->0], RectangleBox[{0.08, 0}, {0.1, 112},
+      RoundingRadius->0], RectangleBox[{0.1, 0}, {0.12, 80},
+      RoundingRadius->0], RectangleBox[{0.12, 0}, {0.14, 89},
+      RoundingRadius->0], RectangleBox[{0.14, 0}, {0.16, 70},
+      RoundingRadius->0], RectangleBox[{0.16, 0}, {0.18, 55},
+      RoundingRadius->0], RectangleBox[{0.18, 0}, {0.2, 46},
+      RoundingRadius->0], RectangleBox[{0.2, 0}, {0.22, 22},
+      RoundingRadius->0], RectangleBox[{0.22, 0}, {0.24, 24},
+      RoundingRadius->0], RectangleBox[{0.24, 0}, {0.26, 16},
+      RoundingRadius->0], RectangleBox[{0.26, 0}, {0.28, 23},
+      RoundingRadius->0], RectangleBox[{0.28, 0}, {0.3, 13},
+      RoundingRadius->0], RectangleBox[{0.3, 0}, {0.32, 8},
+      RoundingRadius->0], RectangleBox[{0.32, 0}, {0.34, 4},
+      RoundingRadius->0], RectangleBox[{0.34, 0}, {0.36, 6},
+      RoundingRadius->0], RectangleBox[{0.36, 0}, {0.38, 2},
+      RoundingRadius->0], RectangleBox[{0.38, 0}, {0.4, 1},
+      RoundingRadius->0], RectangleBox[{0.42, 0}, {0.44, 2},
+      RoundingRadius->0], RectangleBox[{0.52, 0}, {0.54, 1},
+      RoundingRadius->
+       0]}, {}, {}}, {{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, \
+{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, \
+{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}}},
+  AspectRatio->NCache[GoldenRatio^(-1), 0.6180339887498948],
+  Axes->{True, True},
+  AxesLabel->{None, None},
+  AxesOrigin->{-0.5004, 0},
+  FrameLabel->{{None, None}, {None, None}},
+  FrameTicks->{{Automatic, Automatic}, {Automatic, Automatic}},
+  GridLines->{None, None},
+  GridLinesStyle->Directive[
+    GrayLevel[0.5, 0.4]],
+  PlotRange->{{-0.48, 0.54}, {All, All}},
+  PlotRangePadding->{{
+     Scaled[0.02], 
+     Scaled[0.02]}, {
+     Scaled[0.02], 
+     Scaled[0.05]}},
+  Ticks->{Automatic, Automatic}]], "Output",
+ CellChangeTimes->{
+  3.67557333296743*^9, 3.675573393884488*^9, {3.6755775179238033`*^9, 
+   3.675577552254847*^9}, {3.675592710562113*^9, 3.675592730326268*^9}, {
+   3.675592895983283*^9, 3.6755929120820627`*^9}, {3.6770349967988358`*^9, 
+   3.677035009370275*^9}}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"Histogram3D", "[", 
+  RowBox[{
+   RowBox[{"Table", "[", 
+    RowBox[{
+     RowBox[{"vi", "[", 
+      RowBox[{"x", ",", "323", ",", 
+       RowBox[{"{", 
+        RowBox[{"3", ",", "4"}], "}"}]}], "]"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"x", ",", "800", ",", "1800"}], "}"}]}], "]"}], ",", "60"}], 
+  "]"}]], "Input",
+ CellChangeTimes->{{3.6755934277956133`*^9, 3.675593427981484*^9}, 
+   3.6755934847776213`*^9, {3.675593656857246*^9, 3.6755936712354183`*^9}}],
+
+Cell[BoxData[
+ Graphics3DBox[
+  {RGBColor[0.9045776, 0.6888327999999999, 0.31364080000000005`], EdgeForm[
+   None], 
+   StyleBox[{{}, 
+     {RGBColor[0.9045776, 0.6888327999999999, 0.31364080000000005`], EdgeForm[
+      None], 
+      StyleBox[{{{}, CuboidBox[{-1.3, 0.25, 0.}, {-1.25, 0.3, 1.}]}, {{}, 
+         CuboidBox[{-1.2, -0.25, 0.}, {-1.15, -0.2, 1.}]}, {{}, 
+         CuboidBox[{-1.15, -0.05, 0.}, {-1.1, 0., 1.}]}, {{}, 
+         CuboidBox[{-1.15, 0.35, 0.}, {-1.1, 0.4, 1.}]}, {{}, 
+         CuboidBox[{-1.1, -0.1, 0.}, {-1.05, -0.05, 1.}]}, {{}, 
+         CuboidBox[{-1.05, 0.2, 0.}, {-1., 0.25, 1.}]}, {{}, 
+         CuboidBox[{-1., -0.05, 0.}, {-0.95, 0., 1.}]}, {{}, 
+         CuboidBox[{-1., 1.1, 0.}, {-0.95, 1.15, 1.}]}, {{}, 
+         CuboidBox[{-0.95, 0.25, 0.}, {-0.9, 0.3, 1.}]}, {{}, 
+         CuboidBox[{-0.95, 0.3, 0.}, {-0.9, 0.35, 1.}]}, {{}, 
+         CuboidBox[{-0.95, 1.1, 0.}, {-0.9, 1.15, 1.}]}, {{}, 
+         CuboidBox[{-0.9, -0.5, 0.}, {-0.85, -0.45, 1.}]}, {{}, 
+         CuboidBox[{-0.9, -0.35, 0.}, {-0.85, -0.3, 1.}]}, {{}, 
+         CuboidBox[{-0.9, -0.2, 0.}, {-0.85, -0.15, 1.}]}, {{}, 
+         CuboidBox[{-0.9, -0.15, 0.}, {-0.85, -0.1, 1.}]}, {{}, 
+         CuboidBox[{-0.9, 0.1, 0.}, {-0.85, 0.15, 1.}]}, {{}, 
+         CuboidBox[{-0.9, 0.35, 0.}, {-0.85, 0.4, 1.}]}, {{}, 
+         CuboidBox[{-0.9, 0.4, 0.}, {-0.85, 0.45, 1.}]}, {{}, 
+         CuboidBox[{-0.85, -0.15, 0.}, {-0.8, -0.1, 1.}]}, {{}, 
+         CuboidBox[{-0.85, 0., 0.}, {-0.8, 0.05, 1.}]}, {{}, 
+         CuboidBox[{-0.85, 0.1, 0.}, {-0.8, 0.15, 1.}]}, {{}, 
+         CuboidBox[{-0.8, -1.3, 0.}, {-0.75, -1.25, 1.}]}, {{}, 
+         CuboidBox[{-0.8, -0.7, 0.}, {-0.75, -0.65, 1.}]}, {{}, 
+         CuboidBox[{-0.8, -0.45, 0.}, {-0.75, -0.4, 1.}]}, {{}, 
+         CuboidBox[{-0.8, -0.35, 0.}, {-0.75, -0.3, 1.}]}, {{}, 
+         CuboidBox[{-0.8, 0.25, 0.}, {-0.75, 0.3, 1.}]}, {{}, 
+         CuboidBox[{-0.8, 0.4, 0.}, {-0.75, 0.45, 1.}]}, {{}, 
+         CuboidBox[{-0.75, -0.65, 0.}, {-0.7, -0.6, 1.}]}, {{}, 
+         CuboidBox[{-0.75, -0.6, 0.}, {-0.7, -0.55, 1.}]}, {{}, 
+         CuboidBox[{-0.75, -0.4, 0.}, {-0.7, -0.35, 1.}]}, {{}, 
+         CuboidBox[{-0.75, -0.35, 0.}, {-0.7, -0.3, 1.}]}, {{}, 
+         CuboidBox[{-0.75, -0.3, 0.}, {-0.7, -0.25, 1.}]}, {{}, 
+         CuboidBox[{-0.75, 0.4, 0.}, {-0.7, 0.45, 1.}]}, {{}, 
+         CuboidBox[{-0.7, -0.65, 0.}, {-0.65, -0.6, 1.}]}, {{}, 
+         CuboidBox[{-0.7, -0.05, 0.}, {-0.65, 0., 1.}]}, {{}, 
+         CuboidBox[{-0.7, 0.05, 0.}, {-0.65, 0.1, 1.}]}, {{}, 
+         CuboidBox[{-0.7, 0.8, 0.}, {-0.65, 0.85, 1.}]}, {{}, 
+         CuboidBox[{-0.7, 0.95, 0.}, {-0.65, 1., 1.}]}, {{}, 
+         CuboidBox[{-0.65, -0.55, 0.}, {-0.6, -0.5, 1.}]}, {{}, 
+         CuboidBox[{-0.65, -0.35, 0.}, {-0.6, -0.3, 1.}]}, {{}, 
+         CuboidBox[{-0.65, -0.2, 0.}, {-0.6, -0.15, 1.}]}, {{}, 
+         CuboidBox[{-0.65, -0.05, 0.}, {-0.6, 0., 1.}]}, {{}, 
+         CuboidBox[{-0.65, 0.2, 0.}, {-0.6, 0.25, 2.}]}, {{}, 
+         CuboidBox[{-0.65, 0.3, 0.}, {-0.6, 0.35, 1.}]}, {{}, 
+         CuboidBox[{-0.6, -0.6, 0.}, {-0.55, -0.55, 1.}]}, {{}, 
+         CuboidBox[{-0.6, -0.45, 0.}, {-0.55, -0.4, 1.}]}, {{}, 
+         CuboidBox[{-0.6, -0.35, 0.}, {-0.55, -0.3, 1.}]}, {{}, 
+         CuboidBox[{-0.6, -0.25, 0.}, {-0.55, -0.2, 1.}]}, {{}, 
+         CuboidBox[{-0.6, -0.15, 0.}, {-0.55, -0.1, 1.}]}, {{}, 
+         CuboidBox[{-0.6, 0.05, 0.}, {-0.55, 0.1, 2.}]}, {{}, 
+         CuboidBox[{-0.6, 0.1, 0.}, {-0.55, 0.15, 1.}]}, {{}, 
+         CuboidBox[{-0.6, 0.2, 0.}, {-0.55, 0.25, 1.}]}, {{}, 
+         CuboidBox[{-0.6, 0.55, 0.}, {-0.55, 0.6, 1.}]}, {{}, 
+         CuboidBox[{-0.6, 0.65, 0.}, {-0.55, 0.7, 1.}]}, {{}, 
+         CuboidBox[{-0.6, 0.7, 0.}, {-0.55, 0.75, 1.}]}, {{}, 
+         CuboidBox[{-0.6, 0.8, 0.}, {-0.55, 0.85, 1.}]}, {{}, 
+         CuboidBox[{-0.6, 1.3, 0.}, {-0.55, 1.35, 1.}]}, {{}, 
+         CuboidBox[{-0.55, -0.15, 0.}, {-0.5, -0.1, 1.}]}, {{}, 
+         CuboidBox[{-0.55, -0.1, 0.}, {-0.5, -0.05, 1.}]}, {{}, 
+         CuboidBox[{-0.55, 0.05, 0.}, {-0.5, 0.1, 1.}]}, {{}, 
+         CuboidBox[{-0.55, 0.1, 0.}, {-0.5, 0.15, 2.}]}, {{}, 
+         CuboidBox[{-0.55, 0.35, 0.}, {-0.5, 0.4, 1.}]}, {{}, 
+         CuboidBox[{-0.55, 0.4, 0.}, {-0.5, 0.45, 1.}]}, {{}, 
+         CuboidBox[{-0.55, 0.45, 0.}, {-0.5, 0.5, 1.}]}, {{}, 
+         CuboidBox[{-0.55, 0.5, 0.}, {-0.5, 0.55, 1.}]}, {{}, 
+         CuboidBox[{-0.55, 0.85, 0.}, {-0.5, 0.9, 3.}]}, {{}, 
+         CuboidBox[{-0.5, -0.6, 0.}, {-0.45, -0.55, 1.}]}, {{}, 
+         CuboidBox[{-0.5, -0.5, 0.}, {-0.45, -0.45, 1.}]}, {{}, 
+         CuboidBox[{-0.5, -0.45, 0.}, {-0.45, -0.4, 1.}]}, {{}, 
+         CuboidBox[{-0.5, -0.35, 0.}, {-0.45, -0.3, 1.}]}, {{}, 
+         CuboidBox[{-0.5, -0.2, 0.}, {-0.45, -0.15, 1.}]}, {{}, 
+         CuboidBox[{-0.5, 0.15, 0.}, {-0.45, 0.2, 1.}]}, {{}, 
+         CuboidBox[{-0.5, 0.3, 0.}, {-0.45, 0.35, 1.}]}, {{}, 
+         CuboidBox[{-0.5, 0.35, 0.}, {-0.45, 0.4, 1.}]}, {{}, 
+         CuboidBox[{-0.5, 0.5, 0.}, {-0.45, 0.55, 1.}]}, {{}, 
+         CuboidBox[{-0.5, 1.3, 0.}, {-0.45, 1.35, 2.}]}, {{}, 
+         CuboidBox[{-0.45, -0.65, 0.}, {-0.4, -0.6, 1.}]}, {{}, 
+         CuboidBox[{-0.45, -0.4, 0.}, {-0.4, -0.35, 1.}]}, {{}, 
+         CuboidBox[{-0.45, -0.35, 0.}, {-0.4, -0.3, 1.}]}, {{}, 
+         CuboidBox[{-0.45, -0.25, 0.}, {-0.4, -0.2, 1.}]}, {{}, 
+         CuboidBox[{-0.45, -0.1, 0.}, {-0.4, -0.05, 2.}]}, {{}, 
+         CuboidBox[{-0.45, 0., 0.}, {-0.4, 0.05, 1.}]}, {{}, 
+         CuboidBox[{-0.45, 0.15, 0.}, {-0.4, 0.2, 1.}]}, {{}, 
+         CuboidBox[{-0.45, 0.25, 0.}, {-0.4, 0.3, 1.}]}, {{}, 
+         CuboidBox[{-0.45, 0.3, 0.}, {-0.4, 0.35, 1.}]}, {{}, 
+         CuboidBox[{-0.45, 0.4, 0.}, {-0.4, 0.45, 1.}]}, {{}, 
+         CuboidBox[{-0.45, 0.45, 0.}, {-0.4, 0.5, 1.}]}, {{}, 
+         CuboidBox[{-0.45, 0.65, 0.}, {-0.4, 0.7, 1.}]}, {{}, 
+         CuboidBox[{-0.45, 0.75, 0.}, {-0.4, 0.8, 2.}]}, {{}, 
+         CuboidBox[{-0.45, 0.9, 0.}, {-0.4, 0.95, 1.}]}, {{}, 
+         CuboidBox[{-0.45, 0.95, 0.}, {-0.4, 1., 1.}]}, {{}, 
+         CuboidBox[{-0.4, -0.85, 0.}, {-0.35, -0.8, 1.}]}, {{}, 
+         CuboidBox[{-0.4, -0.8, 0.}, {-0.35, -0.75, 1.}]}, {{}, 
+         CuboidBox[{-0.4, -0.65, 0.}, {-0.35, -0.6, 1.}]}, {{}, 
+         CuboidBox[{-0.4, -0.55, 0.}, {-0.35, -0.5, 1.}]}, {{}, 
+         CuboidBox[{-0.4, -0.35, 0.}, {-0.35, -0.3, 1.}]}, {{}, 
+         CuboidBox[{-0.4, -0.3, 0.}, {-0.35, -0.25, 1.}]}, {{}, 
+         CuboidBox[{-0.4, -0.25, 0.}, {-0.35, -0.2, 1.}]}, {{}, 
+         CuboidBox[{-0.4, -0.15, 0.}, {-0.35, -0.1, 1.}]}, {{}, 
+         CuboidBox[{-0.4, -0.1, 0.}, {-0.35, -0.05, 2.}]}, {{}, 
+         CuboidBox[{-0.4, -0.05, 0.}, {-0.35, 0., 2.}]}, {{}, 
+         CuboidBox[{-0.4, 0.05, 0.}, {-0.35, 0.1, 1.}]}, {{}, 
+         CuboidBox[{-0.4, 0.1, 0.}, {-0.35, 0.15, 1.}]}, {{}, 
+         CuboidBox[{-0.4, 0.15, 0.}, {-0.35, 0.2, 1.}]}, {{}, 
+         CuboidBox[{-0.4, 0.2, 0.}, {-0.35, 0.25, 1.}]}, {{}, 
+         CuboidBox[{-0.4, 0.45, 0.}, {-0.35, 0.5, 3.}]}, {{}, 
+         CuboidBox[{-0.4, 0.65, 0.}, {-0.35, 0.7, 1.}]}, {{}, 
+         CuboidBox[{-0.35, -1.1, 0.}, {-0.3, -1.05, 1.}]}, {{}, 
+         CuboidBox[{-0.35, -0.6, 0.}, {-0.3, -0.55, 2.}]}, {{}, 
+         CuboidBox[{-0.35, -0.4, 0.}, {-0.3, -0.35, 3.}]}, {{}, 
+         CuboidBox[{-0.35, -0.35, 0.}, {-0.3, -0.3, 4.}]}, {{}, 
+         CuboidBox[{-0.35, -0.25, 0.}, {-0.3, -0.2, 3.}]}, {{}, 
+         CuboidBox[{-0.35, -0.05, 0.}, {-0.3, 0., 5.}]}, {{}, 
+         CuboidBox[{-0.35, 0., 0.}, {-0.3, 0.05, 2.}]}, {{}, 
+         CuboidBox[{-0.35, 0.05, 0.}, {-0.3, 0.1, 1.}]}, {{}, 
+         CuboidBox[{-0.35, 0.35, 0.}, {-0.3, 0.4, 1.}]}, {{}, 
+         CuboidBox[{-0.35, 0.4, 0.}, {-0.3, 0.45, 1.}]}, {{}, 
+         CuboidBox[{-0.35, 0.45, 0.}, {-0.3, 0.5, 1.}]}, {{}, 
+         CuboidBox[{-0.35, 0.55, 0.}, {-0.3, 0.6, 2.}]}, {{}, 
+         CuboidBox[{-0.35, 0.6, 0.}, {-0.3, 0.65, 2.}]}, {{}, 
+         CuboidBox[{-0.35, 0.7, 0.}, {-0.3, 0.75, 1.}]}, {{}, 
+         CuboidBox[{-0.35, 0.75, 0.}, {-0.3, 0.8, 1.}]}, {{}, 
+         CuboidBox[{-0.35, 0.8, 0.}, {-0.3, 0.85, 1.}]}, {{}, 
+         CuboidBox[{-0.35, 1.15, 0.}, {-0.3, 1.2, 1.}]}, {{}, 
+         CuboidBox[{-0.35, 1.35, 0.}, {-0.3, 1.4, 1.}]}, {{}, 
+         CuboidBox[{-0.3, -0.65, 0.}, {-0.25, -0.6, 1.}]}, {{}, 
+         CuboidBox[{-0.3, -0.4, 0.}, {-0.25, -0.35, 1.}]}, {{}, 
+         CuboidBox[{-0.3, -0.35, 0.}, {-0.25, -0.3, 1.}]}, {{}, 
+         CuboidBox[{-0.3, -0.3, 0.}, {-0.25, -0.25, 1.}]}, {{}, 
+         CuboidBox[{-0.3, -0.2, 0.}, {-0.25, -0.15, 1.}]}, {{}, 
+         CuboidBox[{-0.3, -0.1, 0.}, {-0.25, -0.05, 2.}]}, {{}, 
+         CuboidBox[{-0.3, -0.05, 0.}, {-0.25, 0., 2.}]}, {{}, 
+         CuboidBox[{-0.3, 0., 0.}, {-0.25, 0.05, 1.}]}, {{}, 
+         CuboidBox[{-0.3, 0.05, 0.}, {-0.25, 0.1, 4.}]}, {{}, 
+         CuboidBox[{-0.3, 0.15, 0.}, {-0.25, 0.2, 1.}]}, {{}, 
+         CuboidBox[{-0.3, 0.2, 0.}, {-0.25, 0.25, 1.}]}, {{}, 
+         CuboidBox[{-0.3, 0.3, 0.}, {-0.25, 0.35, 2.}]}, {{}, 
+         CuboidBox[{-0.3, 0.4, 0.}, {-0.25, 0.45, 1.}]}, {{}, 
+         CuboidBox[{-0.3, 0.45, 0.}, {-0.25, 0.5, 1.}]}, {{}, 
+         CuboidBox[{-0.3, 0.5, 0.}, {-0.25, 0.55, 1.}]}, {{}, 
+         CuboidBox[{-0.3, 0.55, 0.}, {-0.25, 0.6, 1.}]}, {{}, 
+         CuboidBox[{-0.3, 0.6, 0.}, {-0.25, 0.65, 2.}]}, {{}, 
+         CuboidBox[{-0.3, 0.75, 0.}, {-0.25, 0.8, 2.}]}, {{}, 
+         CuboidBox[{-0.3, 0.85, 0.}, {-0.25, 0.9, 1.}]}, {{}, 
+         CuboidBox[{-0.3, 1.1, 0.}, {-0.25, 1.15, 1.}]}, {{}, 
+         CuboidBox[{-0.3, 1.35, 0.}, {-0.25, 1.4, 1.}]}, {{}, 
+         CuboidBox[{-0.25, -1., 0.}, {-0.2, -0.95, 1.}]}, {{}, 
+         CuboidBox[{-0.25, -0.6, 0.}, {-0.2, -0.55, 1.}]}, {{}, 
+         CuboidBox[{-0.25, -0.55, 0.}, {-0.2, -0.5, 1.}]}, {{}, 
+         CuboidBox[{-0.25, -0.4, 0.}, {-0.2, -0.35, 1.}]}, {{}, 
+         CuboidBox[{-0.25, -0.35, 0.}, {-0.2, -0.3, 2.}]}, {{}, 
+         CuboidBox[{-0.25, -0.3, 0.}, {-0.2, -0.25, 3.}]}, {{}, 
+         CuboidBox[{-0.25, -0.25, 0.}, {-0.2, -0.2, 4.}]}, {{}, 
+         CuboidBox[{-0.25, -0.2, 0.}, {-0.2, -0.15, 1.}]}, {{}, 
+         CuboidBox[{-0.25, -0.05, 0.}, {-0.2, 0., 1.}]}, {{}, 
+         CuboidBox[{-0.25, 0., 0.}, {-0.2, 0.05, 2.}]}, {{}, 
+         CuboidBox[{-0.25, 0.05, 0.}, {-0.2, 0.1, 1.}]}, {{}, 
+         CuboidBox[{-0.25, 0.1, 0.}, {-0.2, 0.15, 1.}]}, {{}, 
+         CuboidBox[{-0.25, 0.15, 0.}, {-0.2, 0.2, 1.}]}, {{}, 
+         CuboidBox[{-0.25, 0.3, 0.}, {-0.2, 0.35, 2.}]}, {{}, 
+         CuboidBox[{-0.25, 0.4, 0.}, {-0.2, 0.45, 1.}]}, {{}, 
+         CuboidBox[{-0.25, 0.45, 0.}, {-0.2, 0.5, 1.}]}, {{}, 
+         CuboidBox[{-0.25, 0.65, 0.}, {-0.2, 0.7, 1.}]}, {{}, 
+         CuboidBox[{-0.25, 0.8, 0.}, {-0.2, 0.85, 1.}]}, {{}, 
+         CuboidBox[{-0.25, 1., 0.}, {-0.2, 1.05, 1.}]}, {{}, 
+         CuboidBox[{-0.2, -1.2, 0.}, {-0.15, -1.15, 1.}]}, {{}, 
+         CuboidBox[{-0.2, -0.9, 0.}, {-0.15, -0.85, 1.}]}, {{}, 
+         CuboidBox[{-0.2, -0.8, 0.}, {-0.15, -0.75, 1.}]}, {{}, 
+         CuboidBox[{-0.2, -0.65, 0.}, {-0.15, -0.6, 1.}]}, {{}, 
+         CuboidBox[{-0.2, -0.45, 0.}, {-0.15, -0.4, 1.}]}, {{}, 
+         CuboidBox[{-0.2, -0.35, 0.}, {-0.15, -0.3, 1.}]}, {{}, 
+         CuboidBox[{-0.2, -0.25, 0.}, {-0.15, -0.2, 3.}]}, {{}, 
+         CuboidBox[{-0.2, -0.1, 0.}, {-0.15, -0.05, 3.}]}, {{}, 
+         CuboidBox[{-0.2, -0.05, 0.}, {-0.15, 0., 1.}]}, {{}, 
+         CuboidBox[{-0.2, 0., 0.}, {-0.15, 0.05, 4.}]}, {{}, 
+         CuboidBox[{-0.2, 0.05, 0.}, {-0.15, 0.1, 4.}]}, {{}, 
+         CuboidBox[{-0.2, 0.15, 0.}, {-0.15, 0.2, 1.}]}, {{}, 
+         CuboidBox[{-0.2, 0.2, 0.}, {-0.15, 0.25, 4.}]}, {{}, 
+         CuboidBox[{-0.2, 0.3, 0.}, {-0.15, 0.35, 1.}]}, {{}, 
+         CuboidBox[{-0.2, 0.4, 0.}, {-0.15, 0.45, 2.}]}, {{}, 
+         CuboidBox[{-0.2, 0.5, 0.}, {-0.15, 0.55, 1.}]}, {{}, 
+         CuboidBox[{-0.2, 0.65, 0.}, {-0.15, 0.7, 1.}]}, {{}, 
+         CuboidBox[{-0.15, -0.85, 0.}, {-0.1, -0.8, 1.}]}, {{}, 
+         CuboidBox[{-0.15, -0.55, 0.}, {-0.1, -0.5, 2.}]}, {{}, 
+         CuboidBox[{-0.15, -0.5, 0.}, {-0.1, -0.45, 2.}]}, {{}, 
+         CuboidBox[{-0.15, -0.45, 0.}, {-0.1, -0.4, 1.}]}, {{}, 
+         CuboidBox[{-0.15, -0.4, 0.}, {-0.1, -0.35, 1.}]}, {{}, 
+         CuboidBox[{-0.15, -0.3, 0.}, {-0.1, -0.25, 1.}]}, {{}, 
+         CuboidBox[{-0.15, -0.25, 0.}, {-0.1, -0.2, 2.}]}, {{}, 
+         CuboidBox[{-0.15, -0.2, 0.}, {-0.1, -0.15, 2.}]}, {{}, 
+         CuboidBox[{-0.15, -0.15, 0.}, {-0.1, -0.1, 1.}]}, {{}, 
+         CuboidBox[{-0.15, -0.1, 0.}, {-0.1, -0.05, 2.}]}, {{}, 
+         CuboidBox[{-0.15, 0., 0.}, {-0.1, 0.05, 1.}]}, {{}, 
+         CuboidBox[{-0.15, 0.15, 0.}, {-0.1, 0.2, 5.}]}, {{}, 
+         CuboidBox[{-0.15, 0.2, 0.}, {-0.1, 0.25, 2.}]}, {{}, 
+         CuboidBox[{-0.15, 0.25, 0.}, {-0.1, 0.3, 2.}]}, {{}, 
+         CuboidBox[{-0.15, 0.3, 0.}, {-0.1, 0.35, 1.}]}, {{}, 
+         CuboidBox[{-0.15, 0.35, 0.}, {-0.1, 0.4, 1.}]}, {{}, 
+         CuboidBox[{-0.15, 0.6, 0.}, {-0.1, 0.65, 2.}]}, {{}, 
+         CuboidBox[{-0.15, 0.75, 0.}, {-0.1, 0.8, 3.}]}, {{}, 
+         CuboidBox[{-0.1, -0.9, 0.}, {-0.05, -0.85, 1.}]}, {{}, 
+         CuboidBox[{-0.1, -0.7, 0.}, {-0.05, -0.65, 1.}]}, {{}, 
+         CuboidBox[{-0.1, -0.65, 0.}, {-0.05, -0.6, 1.}]}, {{}, 
+         CuboidBox[{-0.1, -0.6, 0.}, {-0.05, -0.55, 2.}]}, {{}, 
+         CuboidBox[{-0.1, -0.55, 0.}, {-0.05, -0.5, 1.}]}, {{}, 
+         CuboidBox[{-0.1, -0.5, 0.}, {-0.05, -0.45, 1.}]}, {{}, 
+         CuboidBox[{-0.1, -0.45, 0.}, {-0.05, -0.4, 1.}]}, {{}, 
+         CuboidBox[{-0.1, -0.35, 0.}, {-0.05, -0.3, 2.}]}, {{}, 
+         CuboidBox[{-0.1, -0.3, 0.}, {-0.05, -0.25, 1.}]}, {{}, 
+         CuboidBox[{-0.1, -0.15, 0.}, {-0.05, -0.1, 2.}]}, {{}, 
+         CuboidBox[{-0.1, -0.1, 0.}, {-0.05, -0.05, 1.}]}, {{}, 
+         CuboidBox[{-0.1, 0., 0.}, {-0.05, 0.05, 3.}]}, {{}, 
+         CuboidBox[{-0.1, 0.05, 0.}, {-0.05, 0.1, 1.}]}, {{}, 
+         CuboidBox[{-0.1, 0.1, 0.}, {-0.05, 0.15, 3.}]}, {{}, 
+         CuboidBox[{-0.1, 0.15, 0.}, {-0.05, 0.2, 1.}]}, {{}, 
+         CuboidBox[{-0.1, 0.25, 0.}, {-0.05, 0.3, 2.}]}, {{}, 
+         CuboidBox[{-0.1, 0.3, 0.}, {-0.05, 0.35, 1.}]}, {{}, 
+         CuboidBox[{-0.1, 0.4, 0.}, {-0.05, 0.45, 1.}]}, {{}, 
+         CuboidBox[{-0.1, 0.5, 0.}, {-0.05, 0.55, 1.}]}, {{}, 
+         CuboidBox[{-0.1, 0.55, 0.}, {-0.05, 0.6, 1.}]}, {{}, 
+         CuboidBox[{-0.1, 0.75, 0.}, {-0.05, 0.8, 2.}]}, {{}, 
+         CuboidBox[{-0.05, -1.3, 0.}, {0., -1.25, 1.}]}, {{}, 
+         CuboidBox[{-0.05, -0.8, 0.}, {0., -0.75, 1.}]}, {{}, 
+         CuboidBox[{-0.05, -0.65, 0.}, {0., -0.6, 4.}]}, {{}, 
+         CuboidBox[{-0.05, -0.45, 0.}, {0., -0.4, 1.}]}, {{}, 
+         CuboidBox[{-0.05, -0.4, 0.}, {0., -0.35, 1.}]}, {{}, 
+         CuboidBox[{-0.05, -0.35, 0.}, {0., -0.3, 2.}]}, {{}, 
+         CuboidBox[{-0.05, -0.3, 0.}, {0., -0.25, 2.}]}, {{}, 
+         CuboidBox[{-0.05, -0.25, 0.}, {0., -0.2, 2.}]}, {{}, 
+         CuboidBox[{-0.05, -0.2, 0.}, {0., -0.15, 2.}]}, {{}, 
+         CuboidBox[{-0.05, -0.15, 0.}, {0., -0.1, 2.}]}, {{}, 
+         CuboidBox[{-0.05, -0.1, 0.}, {0., -0.05, 3.}]}, {{}, 
+         CuboidBox[{-0.05, 0., 0.}, {0., 0.05, 2.}]}, {{}, 
+         CuboidBox[{-0.05, 0.05, 0.}, {0., 0.1, 3.}]}, {{}, 
+         CuboidBox[{-0.05, 0.1, 0.}, {0., 0.15, 4.}]}, {{}, 
+         CuboidBox[{-0.05, 0.25, 0.}, {0., 0.3, 1.}]}, {{}, 
+         CuboidBox[{-0.05, 0.35, 0.}, {0., 0.4, 1.}]}, {{}, 
+         CuboidBox[{-0.05, 0.45, 0.}, {0., 0.5, 2.}]}, {{}, 
+         CuboidBox[{-0.05, 0.5, 0.}, {0., 0.55, 1.}]}, {{}, 
+         CuboidBox[{-0.05, 0.55, 0.}, {0., 0.6, 1.}]}, {{}, 
+         CuboidBox[{-0.05, 0.7, 0.}, {0., 0.75, 2.}]}, {{}, 
+         CuboidBox[{-0.05, 0.75, 0.}, {0., 0.8, 1.}]}, {{}, 
+         CuboidBox[{-0.05, 0.8, 0.}, {0., 0.85, 1.}]}, {{}, 
+         CuboidBox[{-0.05, 0.85, 0.}, {0., 0.9, 1.}]}, {{}, 
+         CuboidBox[{-0.05, 1.1, 0.}, {0., 1.15, 2.}]}, {{}, 
+         CuboidBox[{0., -0.9, 0.}, {0.05, -0.85, 1.}]}, {{}, 
+         CuboidBox[{0., -0.7, 0.}, {0.05, -0.65, 1.}]}, {{}, 
+         CuboidBox[{0., -0.5, 0.}, {0.05, -0.45, 2.}]}, {{}, 
+         CuboidBox[{0., -0.45, 0.}, {0.05, -0.4, 1.}]}, {{}, 
+         CuboidBox[{0., -0.35, 0.}, {0.05, -0.3, 1.}]}, {{}, 
+         CuboidBox[{0., -0.3, 0.}, {0.05, -0.25, 2.}]}, {{}, 
+         CuboidBox[{0., -0.2, 0.}, {0.05, -0.15, 3.}]}, {{}, 
+         CuboidBox[{0., -0.15, 0.}, {0.05, -0.1, 1.}]}, {{}, 
+         CuboidBox[{0., -0.05, 0.}, {0.05, 0., 1.}]}, {{}, 
+         CuboidBox[{0., 0., 0.}, {0.05, 0.05, 1.}]}, {{}, 
+         CuboidBox[{0., 0.1, 0.}, {0.05, 0.15, 6.}]}, {{}, 
+         CuboidBox[{0., 0.15, 0.}, {0.05, 0.2, 3.}]}, {{}, 
+         CuboidBox[{0., 0.2, 0.}, {0.05, 0.25, 1.}]}, {{}, 
+         CuboidBox[{0., 0.25, 0.}, {0.05, 0.3, 3.}]}, {{}, 
+         CuboidBox[{0., 0.3, 0.}, {0.05, 0.35, 2.}]}, {{}, 
+         CuboidBox[{0., 0.35, 0.}, {0.05, 0.4, 3.}]}, {{}, 
+         CuboidBox[{0., 0.4, 0.}, {0.05, 0.45, 1.}]}, {{}, 
+         CuboidBox[{0., 0.45, 0.}, {0.05, 0.5, 3.}]}, {{}, 
+         CuboidBox[{0., 0.55, 0.}, {0.05, 0.6, 1.}]}, {{}, 
+         CuboidBox[{0., 0.6, 0.}, {0.05, 0.65, 1.}]}, {{}, 
+         CuboidBox[{0., 0.65, 0.}, {0.05, 0.7, 1.}]}, {{}, 
+         CuboidBox[{0., 0.75, 0.}, {0.05, 0.8, 2.}]}, {{}, 
+         CuboidBox[{0., 0.8, 0.}, {0.05, 0.85, 1.}]}, {{}, 
+         CuboidBox[{0., 0.85, 0.}, {0.05, 0.9, 1.}]}, {{}, 
+         CuboidBox[{0., 1., 0.}, {0.05, 1.05, 1.}]}, {{}, 
+         CuboidBox[{0., 1.4, 0.}, {0.05, 1.45, 1.}]}, {{}, 
+         CuboidBox[{0.05, -0.8, 0.}, {0.1, -0.75, 2.}]}, {{}, 
+         CuboidBox[{0.05, -0.75, 0.}, {0.1, -0.7, 1.}]}, {{}, 
+         CuboidBox[{0.05, -0.65, 0.}, {0.1, -0.6, 1.}]}, {{}, 
+         CuboidBox[{0.05, -0.6, 0.}, {0.1, -0.55, 2.}]}, {{}, 
+         CuboidBox[{0.05, -0.55, 0.}, {0.1, -0.5, 1.}]}, {{}, 
+         CuboidBox[{0.05, -0.5, 0.}, {0.1, -0.45, 1.}]}, {{}, 
+         CuboidBox[{0.05, -0.45, 0.}, {0.1, -0.4, 1.}]}, {{}, 
+         CuboidBox[{0.05, -0.4, 0.}, {0.1, -0.35, 1.}]}, {{}, 
+         CuboidBox[{0.05, -0.3, 0.}, {0.1, -0.25, 4.}]}, {{}, 
+         CuboidBox[{0.05, -0.25, 0.}, {0.1, -0.2, 1.}]}, {{}, 
+         CuboidBox[{0.05, -0.15, 0.}, {0.1, -0.1, 1.}]}, {{}, 
+         CuboidBox[{0.05, -0.1, 0.}, {0.1, -0.05, 3.}]}, {{}, 
+         CuboidBox[{0.05, -0.05, 0.}, {0.1, 0., 1.}]}, {{}, 
+         CuboidBox[{0.05, 0., 0.}, {0.1, 0.05, 1.}]}, {{}, 
+         CuboidBox[{0.05, 0.05, 0.}, {0.1, 0.1, 2.}]}, {{}, 
+         CuboidBox[{0.05, 0.15, 0.}, {0.1, 0.2, 1.}]}, {{}, 
+         CuboidBox[{0.05, 0.2, 0.}, {0.1, 0.25, 2.}]}, {{}, 
+         CuboidBox[{0.05, 0.25, 0.}, {0.1, 0.3, 1.}]}, {{}, 
+         CuboidBox[{0.05, 0.3, 0.}, {0.1, 0.35, 2.}]}, {{}, 
+         CuboidBox[{0.05, 0.35, 0.}, {0.1, 0.4, 2.}]}, {{}, 
+         CuboidBox[{0.05, 0.5, 0.}, {0.1, 0.55, 1.}]}, {{}, 
+         CuboidBox[{0.05, 0.55, 0.}, {0.1, 0.6, 1.}]}, {{}, 
+         CuboidBox[{0.05, 0.65, 0.}, {0.1, 0.7, 2.}]}, {{}, 
+         CuboidBox[{0.05, 0.85, 0.}, {0.1, 0.9, 1.}]}, {{}, 
+         CuboidBox[{0.05, 0.9, 0.}, {0.1, 0.95, 1.}]}, {{}, 
+         CuboidBox[{0.05, 1.05, 0.}, {0.1, 1.1, 1.}]}, {{}, 
+         CuboidBox[{0.1, -0.9, 0.}, {0.15, -0.85, 1.}]}, {{}, 
+         CuboidBox[{0.1, -0.6, 0.}, {0.15, -0.55, 2.}]}, {{}, 
+         CuboidBox[{0.1, -0.5, 0.}, {0.15, -0.45, 1.}]}, {{}, 
+         CuboidBox[{0.1, -0.35, 0.}, {0.15, -0.3, 2.}]}, {{}, 
+         CuboidBox[{0.1, -0.3, 0.}, {0.15, -0.25, 1.}]}, {{}, 
+         CuboidBox[{0.1, -0.25, 0.}, {0.15, -0.2, 3.}]}, {{}, 
+         CuboidBox[{0.1, -0.2, 0.}, {0.15, -0.15, 1.}]}, {{}, 
+         CuboidBox[{0.1, -0.15, 0.}, {0.15, -0.1, 2.}]}, {{}, 
+         CuboidBox[{0.1, -0.1, 0.}, {0.15, -0.05, 2.}]}, {{}, 
+         CuboidBox[{0.1, -0.05, 0.}, {0.15, 0., 2.}]}, {{}, 
+         CuboidBox[{0.1, 0., 0.}, {0.15, 0.05, 2.}]}, {{}, 
+         CuboidBox[{0.1, 0.05, 0.}, {0.15, 0.1, 2.}]}, {{}, 
+         CuboidBox[{0.1, 0.1, 0.}, {0.15, 0.15, 1.}]}, {{}, 
+         CuboidBox[{0.1, 0.25, 0.}, {0.15, 0.3, 2.}]}, {{}, 
+         CuboidBox[{0.1, 0.3, 0.}, {0.15, 0.35, 1.}]}, {{}, 
+         CuboidBox[{0.1, 0.4, 0.}, {0.15, 0.45, 1.}]}, {{}, 
+         CuboidBox[{0.1, 0.45, 0.}, {0.15, 0.5, 3.}]}, {{}, 
+         CuboidBox[{0.1, 0.65, 0.}, {0.15, 0.7, 1.}]}, {{}, 
+         CuboidBox[{0.1, 0.7, 0.}, {0.15, 0.75, 1.}]}, {{}, 
+         CuboidBox[{0.1, 0.75, 0.}, {0.15, 0.8, 1.}]}, {{}, 
+         CuboidBox[{0.1, 0.8, 0.}, {0.15, 0.85, 1.}]}, {{}, 
+         CuboidBox[{0.1, 0.95, 0.}, {0.15, 1., 1.}]}, {{}, 
+         CuboidBox[{0.15, -0.95, 0.}, {0.2, -0.9, 1.}]}, {{}, 
+         CuboidBox[{0.15, -0.8, 0.}, {0.2, -0.75, 1.}]}, {{}, 
+         CuboidBox[{0.15, -0.75, 0.}, {0.2, -0.7, 1.}]}, {{}, 
+         CuboidBox[{0.15, -0.65, 0.}, {0.2, -0.6, 1.}]}, {{}, 
+         CuboidBox[{0.15, -0.6, 0.}, {0.2, -0.55, 1.}]}, {{}, 
+         CuboidBox[{0.15, -0.45, 0.}, {0.2, -0.4, 1.}]}, {{}, 
+         CuboidBox[{0.15, -0.4, 0.}, {0.2, -0.35, 1.}]}, {{}, 
+         CuboidBox[{0.15, -0.35, 0.}, {0.2, -0.3, 1.}]}, {{}, 
+         CuboidBox[{0.15, -0.3, 0.}, {0.2, -0.25, 1.}]}, {{}, 
+         CuboidBox[{0.15, -0.25, 0.}, {0.2, -0.2, 2.}]}, {{}, 
+         CuboidBox[{0.15, -0.2, 0.}, {0.2, -0.15, 3.}]}, {{}, 
+         CuboidBox[{0.15, -0.1, 0.}, {0.2, -0.05, 4.}]}, {{}, 
+         CuboidBox[{0.15, -0.05, 0.}, {0.2, 0., 2.}]}, {{}, 
+         CuboidBox[{0.15, 0., 0.}, {0.2, 0.05, 3.}]}, {{}, 
+         CuboidBox[{0.15, 0.05, 0.}, {0.2, 0.1, 1.}]}, {{}, 
+         CuboidBox[{0.15, 0.1, 0.}, {0.2, 0.15, 2.}]}, {{}, 
+         CuboidBox[{0.15, 0.15, 0.}, {0.2, 0.2, 1.}]}, {{}, 
+         CuboidBox[{0.15, 0.2, 0.}, {0.2, 0.25, 1.}]}, {{}, 
+         CuboidBox[{0.15, 0.25, 0.}, {0.2, 0.3, 2.}]}, {{}, 
+         CuboidBox[{0.15, 0.35, 0.}, {0.2, 0.4, 1.}]}, {{}, 
+         CuboidBox[{0.15, 0.4, 0.}, {0.2, 0.45, 1.}]}, {{}, 
+         CuboidBox[{0.15, 0.45, 0.}, {0.2, 0.5, 2.}]}, {{}, 
+         CuboidBox[{0.15, 0.5, 0.}, {0.2, 0.55, 3.}]}, {{}, 
+         CuboidBox[{0.15, 0.65, 0.}, {0.2, 0.7, 1.}]}, {{}, 
+         CuboidBox[{0.15, 0.7, 0.}, {0.2, 0.75, 1.}]}, {{}, 
+         CuboidBox[{0.15, 0.75, 0.}, {0.2, 0.8, 1.}]}, {{}, 
+         CuboidBox[{0.15, 0.8, 0.}, {0.2, 0.85, 1.}]}, {{}, 
+         CuboidBox[{0.15, 0.85, 0.}, {0.2, 0.9, 1.}]}, {{}, 
+         CuboidBox[{0.2, -0.65, 0.}, {0.25, -0.6, 1.}]}, {{}, 
+         CuboidBox[{0.2, -0.55, 0.}, {0.25, -0.5, 1.}]}, {{}, 
+         CuboidBox[{0.2, -0.45, 0.}, {0.25, -0.4, 2.}]}, {{}, 
+         CuboidBox[{0.2, -0.35, 0.}, {0.25, -0.3, 1.}]}, {{}, 
+         CuboidBox[{0.2, -0.3, 0.}, {0.25, -0.25, 1.}]}, {{}, 
+         CuboidBox[{0.2, -0.25, 0.}, {0.25, -0.2, 2.}]}, {{}, 
+         CuboidBox[{0.2, -0.15, 0.}, {0.25, -0.1, 1.}]}, {{}, 
+         CuboidBox[{0.2, -0.1, 0.}, {0.25, -0.05, 2.}]}, {{}, 
+         CuboidBox[{0.2, -0.05, 0.}, {0.25, 0., 2.}]}, {{}, 
+         CuboidBox[{0.2, 0., 0.}, {0.25, 0.05, 1.}]}, {{}, 
+         CuboidBox[{0.2, 0.05, 0.}, {0.25, 0.1, 3.}]}, {{}, 
+         CuboidBox[{0.2, 0.1, 0.}, {0.25, 0.15, 4.}]}, {{}, 
+         CuboidBox[{0.2, 0.15, 0.}, {0.25, 0.2, 3.}]}, {{}, 
+         CuboidBox[{0.2, 0.2, 0.}, {0.25, 0.25, 2.}]}, {{}, 
+         CuboidBox[{0.2, 0.25, 0.}, {0.25, 0.3, 1.}]}, {{}, 
+         CuboidBox[{0.2, 0.3, 0.}, {0.25, 0.35, 2.}]}, {{}, 
+         CuboidBox[{0.2, 0.35, 0.}, {0.25, 0.4, 1.}]}, {{}, 
+         CuboidBox[{0.2, 0.45, 0.}, {0.25, 0.5, 1.}]}, {{}, 
+         CuboidBox[{0.2, 0.5, 0.}, {0.25, 0.55, 2.}]}, {{}, 
+         CuboidBox[{0.2, 0.6, 0.}, {0.25, 0.65, 1.}]}, {{}, 
+         CuboidBox[{0.2, 0.65, 0.}, {0.25, 0.7, 2.}]}, {{}, 
+         CuboidBox[{0.2, 0.7, 0.}, {0.25, 0.75, 1.}]}, {{}, 
+         CuboidBox[{0.2, 0.8, 0.}, {0.25, 0.85, 1.}]}, {{}, 
+         CuboidBox[{0.25, -0.8, 0.}, {0.3, -0.75, 1.}]}, {{}, 
+         CuboidBox[{0.25, -0.75, 0.}, {0.3, -0.7, 1.}]}, {{}, 
+         CuboidBox[{0.25, -0.7, 0.}, {0.3, -0.65, 3.}]}, {{}, 
+         CuboidBox[{0.25, -0.65, 0.}, {0.3, -0.6, 1.}]}, {{}, 
+         CuboidBox[{0.25, -0.55, 0.}, {0.3, -0.5, 1.}]}, {{}, 
+         CuboidBox[{0.25, -0.5, 0.}, {0.3, -0.45, 1.}]}, {{}, 
+         CuboidBox[{0.25, -0.4, 0.}, {0.3, -0.35, 1.}]}, {{}, 
+         CuboidBox[{0.25, -0.35, 0.}, {0.3, -0.3, 1.}]}, {{}, 
+         CuboidBox[{0.25, -0.3, 0.}, {0.3, -0.25, 4.}]}, {{}, 
+         CuboidBox[{0.25, -0.2, 0.}, {0.3, -0.15, 3.}]}, {{}, 
+         CuboidBox[{0.25, -0.1, 0.}, {0.3, -0.05, 1.}]}, {{}, 
+         CuboidBox[{0.25, -0.05, 0.}, {0.3, 0., 3.}]}, {{}, 
+         CuboidBox[{0.25, 0., 0.}, {0.3, 0.05, 1.}]}, {{}, 
+         CuboidBox[{0.25, 0.05, 0.}, {0.3, 0.1, 3.}]}, {{}, 
+         CuboidBox[{0.25, 0.1, 0.}, {0.3, 0.15, 2.}]}, {{}, 
+         CuboidBox[{0.25, 0.2, 0.}, {0.3, 0.25, 1.}]}, {{}, 
+         CuboidBox[{0.25, 0.3, 0.}, {0.3, 0.35, 3.}]}, {{}, 
+         CuboidBox[{0.25, 0.4, 0.}, {0.3, 0.45, 1.}]}, {{}, 
+         CuboidBox[{0.25, 0.45, 0.}, {0.3, 0.5, 3.}]}, {{}, 
+         CuboidBox[{0.25, 0.55, 0.}, {0.3, 0.6, 2.}]}, {{}, 
+         CuboidBox[{0.25, 0.6, 0.}, {0.3, 0.65, 2.}]}, {{}, 
+         CuboidBox[{0.25, 0.8, 0.}, {0.3, 0.85, 1.}]}, {{}, 
+         CuboidBox[{0.25, 0.95, 0.}, {0.3, 1., 2.}]}, {{}, 
+         CuboidBox[{0.25, 1., 0.}, {0.3, 1.05, 2.}]}, {{}, 
+         CuboidBox[{0.25, 1.25, 0.}, {0.3, 1.3, 1.}]}, {{}, 
+         CuboidBox[{0.3, -1.1, 0.}, {0.35, -1.05, 1.}]}, {{}, 
+         CuboidBox[{0.3, -0.75, 0.}, {0.35, -0.7, 1.}]}, {{}, 
+         CuboidBox[{0.3, -0.65, 0.}, {0.35, -0.6, 1.}]}, {{}, 
+         CuboidBox[{0.3, -0.6, 0.}, {0.35, -0.55, 2.}]}, {{}, 
+         CuboidBox[{0.3, -0.55, 0.}, {0.35, -0.5, 1.}]}, {{}, 
+         CuboidBox[{0.3, -0.45, 0.}, {0.35, -0.4, 1.}]}, {{}, 
+         CuboidBox[{0.3, -0.4, 0.}, {0.35, -0.35, 2.}]}, {{}, 
+         CuboidBox[{0.3, -0.2, 0.}, {0.35, -0.15, 2.}]}, {{}, 
+         CuboidBox[{0.3, -0.15, 0.}, {0.35, -0.1, 2.}]}, {{}, 
+         CuboidBox[{0.3, -0.05, 0.}, {0.35, 0., 1.}]}, {{}, 
+         CuboidBox[{0.3, 0., 0.}, {0.35, 0.05, 1.}]}, {{}, 
+         CuboidBox[{0.3, 0.05, 0.}, {0.35, 0.1, 3.}]}, {{}, 
+         CuboidBox[{0.3, 0.1, 0.}, {0.35, 0.15, 2.}]}, {{}, 
+         CuboidBox[{0.3, 0.15, 0.}, {0.35, 0.2, 5.}]}, {{}, 
+         CuboidBox[{0.3, 0.35, 0.}, {0.35, 0.4, 2.}]}, {{}, 
+         CuboidBox[{0.3, 0.4, 0.}, {0.35, 0.45, 1.}]}, {{}, 
+         CuboidBox[{0.3, 0.75, 0.}, {0.35, 0.8, 1.}]}, {{}, 
+         CuboidBox[{0.3, 0.9, 0.}, {0.35, 0.95, 1.}]}, {{}, 
+         CuboidBox[{0.3, 1.5, 0.}, {0.35, 1.55, 1.}]}, {{}, 
+         CuboidBox[{0.35, -0.75, 0.}, {0.4, -0.7, 1.}]}, {{}, 
+         CuboidBox[{0.35, -0.7, 0.}, {0.4, -0.65, 1.}]}, {{}, 
+         CuboidBox[{0.35, -0.45, 0.}, {0.4, -0.4, 1.}]}, {{}, 
+         CuboidBox[{0.35, -0.4, 0.}, {0.4, -0.35, 3.}]}, {{}, 
+         CuboidBox[{0.35, -0.35, 0.}, {0.4, -0.3, 4.}]}, {{}, 
+         CuboidBox[{0.35, -0.15, 0.}, {0.4, -0.1, 2.}]}, {{}, 
+         CuboidBox[{0.35, -0.1, 0.}, {0.4, -0.05, 3.}]}, {{}, 
+         CuboidBox[{0.35, -0.05, 0.}, {0.4, 0., 2.}]}, {{}, 
+         CuboidBox[{0.35, 0., 0.}, {0.4, 0.05, 1.}]}, {{}, 
+         CuboidBox[{0.35, 0.05, 0.}, {0.4, 0.1, 3.}]}, {{}, 
+         CuboidBox[{0.35, 0.2, 0.}, {0.4, 0.25, 1.}]}, {{}, 
+         CuboidBox[{0.35, 0.25, 0.}, {0.4, 0.3, 1.}]}, {{}, 
+         CuboidBox[{0.35, 0.35, 0.}, {0.4, 0.4, 1.}]}, {{}, 
+         CuboidBox[{0.35, 0.4, 0.}, {0.4, 0.45, 1.}]}, {{}, 
+         CuboidBox[{0.35, 0.45, 0.}, {0.4, 0.5, 1.}]}, {{}, 
+         CuboidBox[{0.35, 0.5, 0.}, {0.4, 0.55, 1.}]}, {{}, 
+         CuboidBox[{0.35, 0.85, 0.}, {0.4, 0.9, 2.}]}, {{}, 
+         CuboidBox[{0.35, 0.9, 0.}, {0.4, 0.95, 1.}]}, {{}, 
+         CuboidBox[{0.4, -0.7, 0.}, {0.45, -0.65, 2.}]}, {{}, 
+         CuboidBox[{0.4, -0.65, 0.}, {0.45, -0.6, 1.}]}, {{}, 
+         CuboidBox[{0.4, -0.45, 0.}, {0.45, -0.4, 1.}]}, {{}, 
+         CuboidBox[{0.4, -0.4, 0.}, {0.45, -0.35, 1.}]}, {{}, 
+         CuboidBox[{0.4, -0.35, 0.}, {0.45, -0.3, 2.}]}, {{}, 
+         CuboidBox[{0.4, -0.25, 0.}, {0.45, -0.2, 3.}]}, {{}, 
+         CuboidBox[{0.4, -0.2, 0.}, {0.45, -0.15, 1.}]}, {{}, 
+         CuboidBox[{0.4, -0.15, 0.}, {0.45, -0.1, 2.}]}, {{}, 
+         CuboidBox[{0.4, -0.05, 0.}, {0.45, 0., 5.}]}, {{}, 
+         CuboidBox[{0.4, 0., 0.}, {0.45, 0.05, 1.}]}, {{}, 
+         CuboidBox[{0.4, 0.05, 0.}, {0.45, 0.1, 2.}]}, {{}, 
+         CuboidBox[{0.4, 0.1, 0.}, {0.45, 0.15, 2.}]}, {{}, 
+         CuboidBox[{0.4, 0.15, 0.}, {0.45, 0.2, 1.}]}, {{}, 
+         CuboidBox[{0.4, 0.2, 0.}, {0.45, 0.25, 1.}]}, {{}, 
+         CuboidBox[{0.4, 0.25, 0.}, {0.45, 0.3, 1.}]}, {{}, 
+         CuboidBox[{0.4, 0.3, 0.}, {0.45, 0.35, 1.}]}, {{}, 
+         CuboidBox[{0.4, 0.35, 0.}, {0.45, 0.4, 2.}]}, {{}, 
+         CuboidBox[{0.4, 0.4, 0.}, {0.45, 0.45, 1.}]}, {{}, 
+         CuboidBox[{0.4, 0.6, 0.}, {0.45, 0.65, 1.}]}, {{}, 
+         CuboidBox[{0.4, 0.9, 0.}, {0.45, 0.95, 1.}]}, {{}, 
+         CuboidBox[{0.45, -1.15, 0.}, {0.5, -1.1, 1.}]}, {{}, 
+         CuboidBox[{0.45, -1.05, 0.}, {0.5, -1., 1.}]}, {{}, 
+         CuboidBox[{0.45, -1., 0.}, {0.5, -0.95, 1.}]}, {{}, 
+         CuboidBox[{0.45, -0.75, 0.}, {0.5, -0.7, 1.}]}, {{}, 
+         CuboidBox[{0.45, -0.6, 0.}, {0.5, -0.55, 4.}]}, {{}, 
+         CuboidBox[{0.45, -0.45, 0.}, {0.5, -0.4, 1.}]}, {{}, 
+         CuboidBox[{0.45, -0.3, 0.}, {0.5, -0.25, 2.}]}, {{}, 
+         CuboidBox[{0.45, -0.25, 0.}, {0.5, -0.2, 1.}]}, {{}, 
+         CuboidBox[{0.45, -0.2, 0.}, {0.5, -0.15, 4.}]}, {{}, 
+         CuboidBox[{0.45, -0.15, 0.}, {0.5, -0.1, 4.}]}, {{}, 
+         CuboidBox[{0.45, -0.1, 0.}, {0.5, -0.05, 2.}]}, {{}, 
+         CuboidBox[{0.45, -0.05, 0.}, {0.5, 0., 1.}]}, {{}, 
+         CuboidBox[{0.45, 0., 0.}, {0.5, 0.05, 2.}]}, {{}, 
+         CuboidBox[{0.45, 0.05, 0.}, {0.5, 0.1, 1.}]}, {{}, 
+         CuboidBox[{0.45, 0.1, 0.}, {0.5, 0.15, 3.}]}, {{}, 
+         CuboidBox[{0.45, 0.2, 0.}, {0.5, 0.25, 1.}]}, {{}, 
+         CuboidBox[{0.45, 0.3, 0.}, {0.5, 0.35, 3.}]}, {{}, 
+         CuboidBox[{0.45, 0.35, 0.}, {0.5, 0.4, 1.}]}, {{}, 
+         CuboidBox[{0.45, 0.4, 0.}, {0.5, 0.45, 2.}]}, {{}, 
+         CuboidBox[{0.45, 0.45, 0.}, {0.5, 0.5, 1.}]}, {{}, 
+         CuboidBox[{0.45, 0.5, 0.}, {0.5, 0.55, 1.}]}, {{}, 
+         CuboidBox[{0.45, 0.55, 0.}, {0.5, 0.6, 1.}]}, {{}, 
+         CuboidBox[{0.45, 0.8, 0.}, {0.5, 0.85, 1.}]}, {{}, 
+         CuboidBox[{0.45, 0.85, 0.}, {0.5, 0.9, 1.}]}, {{}, 
+         CuboidBox[{0.45, 1.05, 0.}, {0.5, 1.1, 1.}]}, {{}, 
+         CuboidBox[{0.5, -0.95, 0.}, {0.55, -0.9, 1.}]}, {{}, 
+         CuboidBox[{0.5, -0.9, 0.}, {0.55, -0.85, 1.}]}, {{}, 
+         CuboidBox[{0.5, -0.75, 0.}, {0.55, -0.7, 1.}]}, {{}, 
+         CuboidBox[{0.5, -0.7, 0.}, {0.55, -0.65, 2.}]}, {{}, 
+         CuboidBox[{0.5, -0.5, 0.}, {0.55, -0.45, 1.}]}, {{}, 
+         CuboidBox[{0.5, -0.4, 0.}, {0.55, -0.35, 1.}]}, {{}, 
+         CuboidBox[{0.5, -0.3, 0.}, {0.55, -0.25, 2.}]}, {{}, 
+         CuboidBox[{0.5, -0.25, 0.}, {0.55, -0.2, 1.}]}, {{}, 
+         CuboidBox[{0.5, -0.15, 0.}, {0.55, -0.1, 3.}]}, {{}, 
+         CuboidBox[{0.5, -0.05, 0.}, {0.55, 0., 1.}]}, {{}, 
+         CuboidBox[{0.5, 0., 0.}, {0.55, 0.05, 2.}]}, {{}, 
+         CuboidBox[{0.5, 0.05, 0.}, {0.55, 0.1, 1.}]}, {{}, 
+         CuboidBox[{0.5, 0.15, 0.}, {0.55, 0.2, 1.}]}, {{}, 
+         CuboidBox[{0.5, 0.2, 0.}, {0.55, 0.25, 1.}]}, {{}, 
+         CuboidBox[{0.5, 0.25, 0.}, {0.55, 0.3, 1.}]}, {{}, 
+         CuboidBox[{0.5, 0.35, 0.}, {0.55, 0.4, 1.}]}, {{}, 
+         CuboidBox[{0.5, 0.4, 0.}, {0.55, 0.45, 1.}]}, {{}, 
+         CuboidBox[{0.5, 0.65, 0.}, {0.55, 0.7, 2.}]}, {{}, 
+         CuboidBox[{0.5, 0.75, 0.}, {0.55, 0.8, 1.}]}, {{}, 
+         CuboidBox[{0.5, 0.8, 0.}, {0.55, 0.85, 1.}]}, {{}, 
+         CuboidBox[{0.5, 1.25, 0.}, {0.55, 1.3, 1.}]}, {{}, 
+         CuboidBox[{0.55, -1.3, 0.}, {0.6, -1.25, 1.}]}, {{}, 
+         CuboidBox[{0.55, -1.25, 0.}, {0.6, -1.2, 1.}]}, {{}, 
+         CuboidBox[{0.55, -0.8, 0.}, {0.6, -0.75, 3.}]}, {{}, 
+         CuboidBox[{0.55, -0.7, 0.}, {0.6, -0.65, 1.}]}, {{}, 
+         CuboidBox[{0.55, -0.6, 0.}, {0.6, -0.55, 2.}]}, {{}, 
+         CuboidBox[{0.55, -0.5, 0.}, {0.6, -0.45, 3.}]}, {{}, 
+         CuboidBox[{0.55, -0.35, 0.}, {0.6, -0.3, 2.}]}, {{}, 
+         CuboidBox[{0.55, -0.3, 0.}, {0.6, -0.25, 2.}]}, {{}, 
+         CuboidBox[{0.55, -0.25, 0.}, {0.6, -0.2, 1.}]}, {{}, 
+         CuboidBox[{0.55, -0.2, 0.}, {0.6, -0.15, 1.}]}, {{}, 
+         CuboidBox[{0.55, -0.15, 0.}, {0.6, -0.1, 1.}]}, {{}, 
+         CuboidBox[{0.55, -0.1, 0.}, {0.6, -0.05, 1.}]}, {{}, 
+         CuboidBox[{0.55, 0., 0.}, {0.6, 0.05, 1.}]}, {{}, 
+         CuboidBox[{0.55, 0.05, 0.}, {0.6, 0.1, 3.}]}, {{}, 
+         CuboidBox[{0.55, 0.2, 0.}, {0.6, 0.25, 2.}]}, {{}, 
+         CuboidBox[{0.55, 0.25, 0.}, {0.6, 0.3, 1.}]}, {{}, 
+         CuboidBox[{0.55, 0.3, 0.}, {0.6, 0.35, 1.}]}, {{}, 
+         CuboidBox[{0.55, 0.35, 0.}, {0.6, 0.4, 1.}]}, {{}, 
+         CuboidBox[{0.55, 0.4, 0.}, {0.6, 0.45, 1.}]}, {{}, 
+         CuboidBox[{0.55, 0.45, 0.}, {0.6, 0.5, 1.}]}, {{}, 
+         CuboidBox[{0.55, 0.5, 0.}, {0.6, 0.55, 3.}]}, {{}, 
+         CuboidBox[{0.55, 0.6, 0.}, {0.6, 0.65, 1.}]}, {{}, 
+         CuboidBox[{0.55, 0.65, 0.}, {0.6, 0.7, 1.}]}, {{}, 
+         CuboidBox[{0.55, 0.7, 0.}, {0.6, 0.75, 1.}]}, {{}, 
+         CuboidBox[{0.55, 0.85, 0.}, {0.6, 0.9, 1.}]}, {{}, 
+         CuboidBox[{0.55, 1., 0.}, {0.6, 1.05, 1.}]}, {{}, 
+         CuboidBox[{0.6, -1., 0.}, {0.65, -0.95, 1.}]}, {{}, 
+         CuboidBox[{0.6, -0.95, 0.}, {0.65, -0.9, 1.}]}, {{}, 
+         CuboidBox[{0.6, -0.9, 0.}, {0.65, -0.85, 1.}]}, {{}, 
+         CuboidBox[{0.6, -0.8, 0.}, {0.65, -0.75, 1.}]}, {{}, 
+         CuboidBox[{0.6, -0.55, 0.}, {0.65, -0.5, 2.}]}, {{}, 
+         CuboidBox[{0.6, -0.5, 0.}, {0.65, -0.45, 1.}]}, {{}, 
+         CuboidBox[{0.6, -0.3, 0.}, {0.65, -0.25, 1.}]}, {{}, 
+         CuboidBox[{0.6, -0.25, 0.}, {0.65, -0.2, 1.}]}, {{}, 
+         CuboidBox[{0.6, -0.2, 0.}, {0.65, -0.15, 1.}]}, {{}, 
+         CuboidBox[{0.6, -0.15, 0.}, {0.65, -0.1, 1.}]}, {{}, 
+         CuboidBox[{0.6, -0.1, 0.}, {0.65, -0.05, 2.}]}, {{}, 
+         CuboidBox[{0.6, 0., 0.}, {0.65, 0.05, 1.}]}, {{}, 
+         CuboidBox[{0.6, 0.05, 0.}, {0.65, 0.1, 1.}]}, {{}, 
+         CuboidBox[{0.6, 0.1, 0.}, {0.65, 0.15, 1.}]}, {{}, 
+         CuboidBox[{0.6, 0.15, 0.}, {0.65, 0.2, 3.}]}, {{}, 
+         CuboidBox[{0.6, 0.2, 0.}, {0.65, 0.25, 1.}]}, {{}, 
+         CuboidBox[{0.6, 0.3, 0.}, {0.65, 0.35, 1.}]}, {{}, 
+         CuboidBox[{0.6, 0.35, 0.}, {0.65, 0.4, 1.}]}, {{}, 
+         CuboidBox[{0.6, 0.5, 0.}, {0.65, 0.55, 1.}]}, {{}, 
+         CuboidBox[{0.6, 1.2, 0.}, {0.65, 1.25, 1.}]}, {{}, 
+         CuboidBox[{0.65, -1.1, 0.}, {0.7, -1.05, 1.}]}, {{}, 
+         CuboidBox[{0.65, -1.05, 0.}, {0.7, -1., 1.}]}, {{}, 
+         CuboidBox[{0.65, -0.75, 0.}, {0.7, -0.7, 1.}]}, {{}, 
+         CuboidBox[{0.65, -0.65, 0.}, {0.7, -0.6, 1.}]}, {{}, 
+         CuboidBox[{0.65, -0.55, 0.}, {0.7, -0.5, 1.}]}, {{}, 
+         CuboidBox[{0.65, -0.5, 0.}, {0.7, -0.45, 1.}]}, {{}, 
+         CuboidBox[{0.65, -0.45, 0.}, {0.7, -0.4, 1.}]}, {{}, 
+         CuboidBox[{0.65, -0.3, 0.}, {0.7, -0.25, 1.}]}, {{}, 
+         CuboidBox[{0.65, -0.1, 0.}, {0.7, -0.05, 3.}]}, {{}, 
+         CuboidBox[{0.65, -0.05, 0.}, {0.7, 0., 2.}]}, {{}, 
+         CuboidBox[{0.65, 0.1, 0.}, {0.7, 0.15, 2.}]}, {{}, 
+         CuboidBox[{0.65, 0.2, 0.}, {0.7, 0.25, 2.}]}, {{}, 
+         CuboidBox[{0.65, 0.25, 0.}, {0.7, 0.3, 1.}]}, {{}, 
+         CuboidBox[{0.65, 0.4, 0.}, {0.7, 0.45, 3.}]}, {{}, 
+         CuboidBox[{0.65, 0.45, 0.}, {0.7, 0.5, 1.}]}, {{}, 
+         CuboidBox[{0.65, 0.6, 0.}, {0.7, 0.65, 1.}]}, {{}, 
+         CuboidBox[{0.65, 0.65, 0.}, {0.7, 0.7, 1.}]}, {{}, 
+         CuboidBox[{0.7, -1., 0.}, {0.75, -0.95, 1.}]}, {{}, 
+         CuboidBox[{0.7, -0.6, 0.}, {0.75, -0.55, 3.}]}, {{}, 
+         CuboidBox[{0.7, -0.55, 0.}, {0.75, -0.5, 1.}]}, {{}, 
+         CuboidBox[{0.7, -0.5, 0.}, {0.75, -0.45, 1.}]}, {{}, 
+         CuboidBox[{0.7, -0.45, 0.}, {0.75, -0.4, 1.}]}, {{}, 
+         CuboidBox[{0.7, -0.35, 0.}, {0.75, -0.3, 2.}]}, {{}, 
+         CuboidBox[{0.7, -0.25, 0.}, {0.75, -0.2, 2.}]}, {{}, 
+         CuboidBox[{0.7, -0.2, 0.}, {0.75, -0.15, 2.}]}, {{}, 
+         CuboidBox[{0.7, -0.15, 0.}, {0.75, -0.1, 3.}]}, {{}, 
+         CuboidBox[{0.7, -0.05, 0.}, {0.75, 0., 2.}]}, {{}, 
+         CuboidBox[{0.7, 0.05, 0.}, {0.75, 0.1, 3.}]}, {{}, 
+         CuboidBox[{0.7, 0.1, 0.}, {0.75, 0.15, 1.}]}, {{}, 
+         CuboidBox[{0.7, 0.15, 0.}, {0.75, 0.2, 2.}]}, {{}, 
+         CuboidBox[{0.7, 0.25, 0.}, {0.75, 0.3, 1.}]}, {{}, 
+         CuboidBox[{0.7, 0.4, 0.}, {0.75, 0.45, 2.}]}, {{}, 
+         CuboidBox[{0.7, 0.65, 0.}, {0.75, 0.7, 1.}]}, {{}, 
+         CuboidBox[{0.75, -0.85, 0.}, {0.8, -0.8, 1.}]}, {{}, 
+         CuboidBox[{0.75, -0.5, 0.}, {0.8, -0.45, 1.}]}, {{}, 
+         CuboidBox[{0.75, -0.35, 0.}, {0.8, -0.3, 1.}]}, {{}, 
+         CuboidBox[{0.75, -0.3, 0.}, {0.8, -0.25, 1.}]}, {{}, 
+         CuboidBox[{0.75, -0.2, 0.}, {0.8, -0.15, 1.}]}, {{}, 
+         CuboidBox[{0.75, -0.15, 0.}, {0.8, -0.1, 1.}]}, {{}, 
+         CuboidBox[{0.75, -0.05, 0.}, {0.8, 0., 2.}]}, {{}, 
+         CuboidBox[{0.75, 0.05, 0.}, {0.8, 0.1, 1.}]}, {{}, 
+         CuboidBox[{0.75, 0.15, 0.}, {0.8, 0.2, 1.}]}, {{}, 
+         CuboidBox[{0.75, 0.2, 0.}, {0.8, 0.25, 2.}]}, {{}, 
+         CuboidBox[{0.75, 0.3, 0.}, {0.8, 0.35, 2.}]}, {{}, 
+         CuboidBox[{0.75, 0.35, 0.}, {0.8, 0.4, 1.}]}, {{}, 
+         CuboidBox[{0.75, 0.4, 0.}, {0.8, 0.45, 1.}]}, {{}, 
+         CuboidBox[{0.75, 0.5, 0.}, {0.8, 0.55, 1.}]}, {{}, 
+         CuboidBox[{0.75, 0.6, 0.}, {0.8, 0.65, 1.}]}, {{}, 
+         CuboidBox[{0.75, 0.65, 0.}, {0.8, 0.7, 1.}]}, {{}, 
+         CuboidBox[{0.75, 0.75, 0.}, {0.8, 0.8, 1.}]}, {{}, 
+         CuboidBox[{0.8, -1.2, 0.}, {0.85, -1.15, 1.}]}, {{}, 
+         CuboidBox[{0.8, -1.15, 0.}, {0.85, -1.1, 1.}]}, {{}, 
+         CuboidBox[{0.8, -0.95, 0.}, {0.85, -0.9, 1.}]}, {{}, 
+         CuboidBox[{0.8, -0.85, 0.}, {0.85, -0.8, 1.}]}, {{}, 
+         CuboidBox[{0.8, -0.75, 0.}, {0.85, -0.7, 1.}]}, {{}, 
+         CuboidBox[{0.8, -0.6, 0.}, {0.85, -0.55, 1.}]}, {{}, 
+         CuboidBox[{0.8, -0.4, 0.}, {0.85, -0.35, 1.}]}, {{}, 
+         CuboidBox[{0.8, -0.35, 0.}, {0.85, -0.3, 1.}]}, {{}, 
+         CuboidBox[{0.8, 0., 0.}, {0.85, 0.05, 1.}]}, {{}, 
+         CuboidBox[{0.8, 0.05, 0.}, {0.85, 0.1, 1.}]}, {{}, 
+         CuboidBox[{0.8, 0.15, 0.}, {0.85, 0.2, 1.}]}, {{}, 
+         CuboidBox[{0.8, 0.3, 0.}, {0.85, 0.35, 1.}]}, {{}, 
+         CuboidBox[{0.8, 0.35, 0.}, {0.85, 0.4, 2.}]}, {{}, 
+         CuboidBox[{0.8, 0.6, 0.}, {0.85, 0.65, 1.}]}, {{}, 
+         CuboidBox[{0.8, 0.85, 0.}, {0.85, 0.9, 1.}]}, {{}, 
+         CuboidBox[{0.8, 1.35, 0.}, {0.85, 1.4, 1.}]}, {{}, 
+         CuboidBox[{0.85, -0.75, 0.}, {0.9, -0.7, 1.}]}, {{}, 
+         CuboidBox[{0.85, -0.65, 0.}, {0.9, -0.6, 1.}]}, {{}, 
+         CuboidBox[{0.85, -0.45, 0.}, {0.9, -0.4, 1.}]}, {{}, 
+         CuboidBox[{0.85, -0.4, 0.}, {0.9, -0.35, 1.}]}, {{}, 
+         CuboidBox[{0.85, -0.3, 0.}, {0.9, -0.25, 1.}]}, {{}, 
+         CuboidBox[{0.85, -0.25, 0.}, {0.9, -0.2, 2.}]}, {{}, 
+         CuboidBox[{0.85, -0.2, 0.}, {0.9, -0.15, 1.}]}, {{}, 
+         CuboidBox[{0.85, 0., 0.}, {0.9, 0.05, 1.}]}, {{}, 
+         CuboidBox[{0.85, 0.15, 0.}, {0.9, 0.2, 1.}]}, {{}, 
+         CuboidBox[{0.85, 0.55, 0.}, {0.9, 0.6, 1.}]}, {{}, 
+         CuboidBox[{0.85, 0.7, 0.}, {0.9, 0.75, 1.}]}, {{}, 
+         CuboidBox[{0.9, -0.8, 0.}, {0.95, -0.75, 3.}]}, {{}, 
+         CuboidBox[{0.9, -0.7, 0.}, {0.95, -0.65, 1.}]}, {{}, 
+         CuboidBox[{0.9, -0.5, 0.}, {0.95, -0.45, 2.}]}, {{}, 
+         CuboidBox[{0.9, -0.45, 0.}, {0.95, -0.4, 1.}]}, {{}, 
+         CuboidBox[{0.9, -0.35, 0.}, {0.95, -0.3, 2.}]}, {{}, 
+         CuboidBox[{0.9, -0.3, 0.}, {0.95, -0.25, 1.}]}, {{}, 
+         CuboidBox[{0.9, -0.2, 0.}, {0.95, -0.15, 2.}]}, {{}, 
+         CuboidBox[{0.9, 0., 0.}, {0.95, 0.05, 1.}]}, {{}, 
+         CuboidBox[{0.9, 0.05, 0.}, {0.95, 0.1, 1.}]}, {{}, 
+         CuboidBox[{0.9, 0.2, 0.}, {0.95, 0.25, 1.}]}, {{}, 
+         CuboidBox[{0.9, 0.3, 0.}, {0.95, 0.35, 2.}]}, {{}, 
+         CuboidBox[{0.9, 0.4, 0.}, {0.95, 0.45, 1.}]}, {{}, 
+         CuboidBox[{0.95, -1.1, 0.}, {1., -1.05, 1.}]}, {{}, 
+         CuboidBox[{0.95, -0.75, 0.}, {1., -0.7, 1.}]}, {{}, 
+         CuboidBox[{0.95, -0.65, 0.}, {1., -0.6, 1.}]}, {{}, 
+         CuboidBox[{0.95, -0.6, 0.}, {1., -0.55, 1.}]}, {{}, 
+         CuboidBox[{0.95, -0.4, 0.}, {1., -0.35, 1.}]}, {{}, 
+         CuboidBox[{0.95, -0.3, 0.}, {1., -0.25, 1.}]}, {{}, 
+         CuboidBox[{0.95, -0.2, 0.}, {1., -0.15, 1.}]}, {{}, 
+         CuboidBox[{0.95, -0.15, 0.}, {1., -0.1, 2.}]}, {{}, 
+         CuboidBox[{0.95, -0.05, 0.}, {1., 0., 1.}]}, {{}, 
+         CuboidBox[{0.95, 0.2, 0.}, {1., 0.25, 1.}]}, {{}, 
+         CuboidBox[{0.95, 0.3, 0.}, {1., 0.35, 1.}]}, {{}, 
+         CuboidBox[{0.95, 0.35, 0.}, {1., 0.4, 1.}]}, {{}, 
+         CuboidBox[{0.95, 0.4, 0.}, {1., 0.45, 1.}]}, {{}, 
+         CuboidBox[{0.95, 0.5, 0.}, {1., 0.55, 1.}]}, {{}, 
+         CuboidBox[{0.95, 0.6, 0.}, {1., 0.65, 1.}]}, {{}, 
+         CuboidBox[{0.95, 0.65, 0.}, {1., 0.7, 1.}]}, {{}, 
+         CuboidBox[{0.95, 0.95, 0.}, {1., 1., 1.}]}, {{}, 
+         CuboidBox[{1., -0.5, 0.}, {1.05, -0.45, 1.}]}, {{}, 
+         CuboidBox[{1., -0.45, 0.}, {1.05, -0.4, 1.}]}, {{}, 
+         CuboidBox[{1., -0.35, 0.}, {1.05, -0.3, 2.}]}, {{}, 
+         CuboidBox[{1., -0.1, 0.}, {1.05, -0.05, 2.}]}, {{}, 
+         CuboidBox[{1., 0.1, 0.}, {1.05, 0.15, 1.}]}, {{}, 
+         CuboidBox[{1., 0.2, 0.}, {1.05, 0.25, 1.}]}, {{}, 
+         CuboidBox[{1., 0.25, 0.}, {1.05, 0.3, 1.}]}, {{}, 
+         CuboidBox[{1., 0.3, 0.}, {1.05, 0.35, 1.}]}, {{}, 
+         CuboidBox[{1., 0.35, 0.}, {1.05, 0.4, 1.}]}, {{}, 
+         CuboidBox[{1.05, -0.55, 0.}, {1.1, -0.5, 1.}]}, {{}, 
+         CuboidBox[{1.05, -0.45, 0.}, {1.1, -0.4, 1.}]}, {{}, 
+         CuboidBox[{1.05, -0.35, 0.}, {1.1, -0.3, 1.}]}, {{}, 
+         CuboidBox[{1.05, -0.2, 0.}, {1.1, -0.15, 2.}]}, {{}, 
+         CuboidBox[{1.05, -0.15, 0.}, {1.1, -0.1, 2.}]}, {{}, 
+         CuboidBox[{1.05, -0.1, 0.}, {1.1, -0.05, 2.}]}, {{}, 
+         CuboidBox[{1.05, -0.05, 0.}, {1.1, 0., 1.}]}, {{}, 
+         CuboidBox[{1.05, 0.35, 0.}, {1.1, 0.4, 1.}]}, {{}, 
+         CuboidBox[{1.05, 0.4, 0.}, {1.1, 0.45, 3.}]}, {{}, 
+         CuboidBox[{1.05, 0.65, 0.}, {1.1, 0.7, 1.}]}, {{}, 
+         CuboidBox[{1.1, 0.25, 0.}, {1.15, 0.3, 1.}]}, {{}, 
+         CuboidBox[{1.1, 0.3, 0.}, {1.15, 0.35, 1.}]}, {{}, 
+         CuboidBox[{1.1, 0.9, 0.}, {1.15, 0.95, 1.}]}, {{}, 
+         CuboidBox[{1.15, -1.05, 0.}, {1.2, -1., 1.}]}, {{}, 
+         CuboidBox[{1.15, -0.75, 0.}, {1.2, -0.7, 1.}]}, {{}, 
+         CuboidBox[{1.15, -0.3, 0.}, {1.2, -0.25, 1.}]}, {{}, 
+         CuboidBox[{1.15, -0.25, 0.}, {1.2, -0.2, 2.}]}, {{}, 
+         CuboidBox[{1.15, -0.05, 0.}, {1.2, 0., 2.}]}, {{}, 
+         CuboidBox[{1.15, 0.6, 0.}, {1.2, 0.65, 1.}]}, {{}, 
+         CuboidBox[{1.15, 0.8, 0.}, {1.2, 0.85, 1.}]}, {{}, 
+         CuboidBox[{1.2, -0.35, 0.}, {1.25, -0.3, 1.}]}, {{}, 
+         CuboidBox[{1.2, -0.05, 0.}, {1.25, 0., 1.}]}, {{}, 
+         CuboidBox[{1.25, -1., 0.}, {1.3, -0.95, 1.}]}, {{}, 
+         CuboidBox[{1.25, -0.35, 0.}, {1.3, -0.3, 1.}]}, {{}, 
+         CuboidBox[{1.25, -0.3, 0.}, {1.3, -0.25, 1.}]}, {{}, 
+         CuboidBox[{1.25, -0.1, 0.}, {1.3, -0.05, 1.}]}, {{}, 
+         CuboidBox[{1.3, -1., 0.}, {1.35, -0.95, 1.}]}, {{}, 
+         CuboidBox[{1.35, 0.15, 0.}, {1.4, 0.2, 1.}]}, {{}, 
+         CuboidBox[{1.35, 0.7, 0.}, {1.4, 0.75, 1.}]}, {{}, 
+         CuboidBox[{1.4, 0.65, 0.}, {1.45, 0.7, 1.}]}, {{}, 
+         CuboidBox[{1.4, 0.85, 0.}, {1.45, 0.9, 1.}]}, {{}, 
+         CuboidBox[{1.45, -0.55, 0.}, {1.5, -0.5, 1.}]}, {{}, 
+         CuboidBox[{1.45, -0.2, 0.}, {1.5, -0.15, 1.}]}, {{}, 
+         CuboidBox[{1.5, 0.35, 0.}, {1.55, 0.4, 1.}]}, {{}, 
+         CuboidBox[{1.65, -0.05, 0.}, {1.7, 0., 1.}]}, {{}, 
+         CuboidBox[{1.85, -0.35, 0.}, {1.9, -0.3, 1.}]}},
+       FontColor->GrayLevel[0.4]]}, {}, {}},
+    FontColor->GrayLevel[0.4]]},
+  AutomaticImageSize->True,
+  Axes->{True, True, True},
+  AxesLabel->{None, None, None},
+  BoxRatios->{1, 1, 0.4},
+  FaceGridsStyle->Automatic,
+  ImageSize->{342.60531290102404`, 298.42917904046294`},
+  Lighting->"Neutral",
+  Method->{"RotationControl" -> "Globe"},
+  PlotRange->{{-1.3, 1.9}, {-1.3, 1.55}, {All, All}},
+  PlotRangePadding->{{
+     Scaled[0.02], 
+     Scaled[0.02]}, {
+     Scaled[0.02], 
+     Scaled[0.02]}, {
+     Scaled[0.02], 
+     Scaled[0.1]}},
+  Ticks->{Automatic, Automatic, Automatic},
+  ViewPoint->{0.8409900813655036, -2.337218226042072, 2.2978569683297505`},
+  ViewVertical->{0., 0., 1.}]], "Output",
+ CellChangeTimes->{
+  3.675593435046403*^9, 3.6755934854868107`*^9, {3.67559365935116*^9, 
+   3.6755936729329653`*^9}, 3.677035021227169*^9}]
+}, Open  ]],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"cosine", "[", 
+   RowBox[{"x1_", ",", "x2_"}], "]"}], ":=", 
+  FractionBox[
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{
+      "iVArray", "\[LeftDoubleBracket]", "1800", "\[RightDoubleBracket]"}], 
+      "\[LeftDoubleBracket]", "x1", "\[RightDoubleBracket]"}], "}"}], ".", 
+    RowBox[{"Transpose", "[", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{
+       "iVArray", "\[LeftDoubleBracket]", "1800", "\[RightDoubleBracket]"}], 
+       "\[LeftDoubleBracket]", "x2", "\[RightDoubleBracket]"}], "}"}], 
+     "]"}]}], 
+   RowBox[{
+    RowBox[{"Norm", "[", 
+     RowBox[{
+      RowBox[{
+      "iVArray", "\[LeftDoubleBracket]", "1800", "\[RightDoubleBracket]"}], 
+      "\[LeftDoubleBracket]", "x1", "\[RightDoubleBracket]"}], "]"}], " ", 
+    RowBox[{"Norm", "[", 
+     RowBox[{
+      RowBox[{
+      "iVArray", "\[LeftDoubleBracket]", "1800", "\[RightDoubleBracket]"}], 
+      "\[LeftDoubleBracket]", "x2", "\[RightDoubleBracket]"}], 
+     "]"}]}]]}]], "Input"]
+}, Closed]]
+}, Open  ]]
+},
+WindowSize->{808, 716},
+WindowMargins->{{145, Automatic}, {45, Automatic}},
+FrontEndVersion->"10.0 for Mac OS X x86 (32-bit, 64-bit Kernel) (December 4, \
+2014)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[CellGroupData[{
+Cell[580, 22, 296, 7, 115, "Title"],
+Cell[CellGroupData[{
+Cell[901, 33, 165, 2, 64, "Section"],
+Cell[1069, 37, 328, 5, 46, "Input"],
+Cell[1400, 44, 205, 3, 28, "Input"],
+Cell[CellGroupData[{
+Cell[1630, 51, 1245, 30, 97, "Input"],
+Cell[2878, 83, 95, 1, 28, "Output"]
+}, Open  ]],
+Cell[2988, 87, 972, 30, 97, "Input"],
+Cell[3963, 119, 553, 11, 46, "Input"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[4553, 135, 120, 2, 50, "Section"],
+Cell[4676, 139, 3444, 106, 182, "Input"],
+Cell[8123, 247, 4619, 127, 338, "Input"],
+Cell[12745, 376, 2138, 53, 114, "Input"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[14920, 434, 90, 1, 50, "Section"],
+Cell[15013, 437, 9994, 210, 1134, "Input"],
+Cell[CellGroupData[{
+Cell[25032, 651, 168, 2, 28, "Input"],
+Cell[25203, 655, 1168, 19, 28, "Output"]
+}, Open  ]]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[26420, 680, 88, 1, 50, "Section"],
+Cell[26511, 683, 132, 1, 30, "Text"],
+Cell[26646, 686, 180, 3, 28, "Input"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[26863, 694, 154, 2, 50, "Section"],
+Cell[CellGroupData[{
+Cell[27042, 700, 232, 4, 28, "Input"],
+Cell[27277, 706, 1016, 27, 236, "Output"]
+}, Open  ]],
+Cell[28308, 736, 1286, 36, 63, "Input"],
+Cell[CellGroupData[{
+Cell[29619, 776, 462, 13, 46, "Input"],
+Cell[30084, 791, 4940, 91, 252, "Output"]
+}, Open  ]],
+Cell[35039, 885, 688, 20, 46, "Input"],
+Cell[CellGroupData[{
+Cell[35752, 909, 550, 13, 28, "Input"],
+Cell[36305, 924, 4182, 76, 238, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[40524, 1005, 489, 13, 28, "Input"],
+Cell[41016, 1020, 44440, 725, 313, "Output"]
+}, Open  ]],
+Cell[85471, 1748, 1011, 29, 51, "Input"]
+}, Closed]]
+}, Open  ]]
+}
+]
+*)
+
+(* End of internal cache information *)
