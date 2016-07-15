@@ -10,25 +10,30 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[    227626,       4321]
-NotebookOptionsPosition[    225077,       4232]
-NotebookOutlinePosition[    225435,       4248]
-CellTagsIndexPosition[    225392,       4245]
+NotebookDataLength[    228059,       4323]
+NotebookOptionsPosition[    225542,       4236]
+NotebookOutlinePosition[    225900,       4252]
+CellTagsIndexPosition[    225857,       4249]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
 Notebook[{
-
-Cell[CellGroupData[{
 Cell[TextData[{
- "BPMF",
- StyleBox["\nMick Ramsey",
-  FontSize->16]
-}], "Title",
- CellChangeTimes->{{3.4632619436272793`*^9, 3.463261968416212*^9}, {
-   3.671340401887377*^9, 3.6713404072406807`*^9}, {3.671401524861766*^9, 
-   3.6714015272904377`*^9}, {3.677302240645755*^9, 3.677302242018333*^9}, {
-   3.677453350652491*^9, 3.677453362452506*^9}, 3.677453415524836*^9}],
+ "This program is free software: you can redistribute it and/or modify it \
+under the terms of the GNU General Public License as published by the Free \
+Software Foundation, either version 3 of the License, or (at your option) any \
+later version.\nThis program is distributed in the hope that it will be \
+useful, but WITHOUT ANY WARRANTY; without even the implied warranty of \
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General \
+Public License for more details.\nYou should have received a copy of the GNU \
+General Public License along with this program. If not, see \
+http://www.gnu.org/licenses/.\n\n",
+ StyleBox["Bayesian Matrix Factoriztion with Maximum Relative Entropy \
+Constraints",
+  FontWeight->"Bold"],
+ " Copyright (C) 2016 Mick Ramsey"
+}], "Text",
+ CellChangeTimes->{{3.677614711959896*^9, 3.677614792114691*^9}}],
 
 Cell[CellGroupData[{
 
@@ -672,7 +677,7 @@ Cell[BoxData[
 
 Cell["Copyright 2016, Mick Ramsey, All rights reserved", "Text",
  CellChangeTimes->{3.67745374971591*^9}]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -4228,7 +4233,6 @@ Cell[BoxData[
 Cell["Copyright 2016, Mick Ramsey, All rights reserved", "Text",
  CellChangeTimes->{{3.677453382625361*^9, 3.67745340494925*^9}}]
 }, Closed]]
-}, Open  ]]
 },
 WindowSize->{808, 716},
 WindowMargins->{{252, Automatic}, {Automatic, 40}},
@@ -4247,82 +4251,80 @@ CellTagsIndex->{}
 *)
 (*NotebookFileOutline
 Notebook[{
+Cell[558, 20, 869, 15, 201, "Text"],
 Cell[CellGroupData[{
-Cell[580, 22, 370, 8, 115, "Title"],
-Cell[CellGroupData[{
-Cell[975, 34, 165, 2, 64, "Section"],
-Cell[1143, 38, 328, 5, 46, "Input"],
-Cell[1474, 45, 205, 3, 28, "Input"],
-Cell[1682, 50, 1303, 33, 114, "Input"],
-Cell[2988, 85, 972, 30, 97, "Input"],
-Cell[3963, 117, 553, 11, 46, "Input"]
+Cell[1452, 39, 165, 2, 64, "Section"],
+Cell[1620, 43, 328, 5, 46, "Input"],
+Cell[1951, 50, 205, 3, 28, "Input"],
+Cell[2159, 55, 1303, 33, 114, "Input"],
+Cell[3465, 90, 972, 30, 97, "Input"],
+Cell[4440, 122, 553, 11, 46, "Input"]
 }, Closed]],
 Cell[CellGroupData[{
-Cell[4553, 133, 120, 2, 50, "Section"],
-Cell[4676, 137, 12638, 373, 798, "Input"]
+Cell[5030, 138, 120, 2, 50, "Section"],
+Cell[5153, 142, 12638, 373, 798, "Input"]
 }, Closed]],
 Cell[CellGroupData[{
-Cell[17351, 515, 96, 1, 50, "Section"],
-Cell[17450, 518, 349, 9, 46, "Input"],
-Cell[17802, 529, 1109, 31, 114, "Input"],
-Cell[18914, 562, 2925, 65, 335, "Input"],
-Cell[21842, 629, 1059, 30, 63, "Input"],
-Cell[22904, 661, 509, 9, 62, "Input"],
-Cell[23416, 672, 105, 1, 30, "Text"]
+Cell[17828, 520, 96, 1, 50, "Section"],
+Cell[17927, 523, 349, 9, 46, "Input"],
+Cell[18279, 534, 1109, 31, 114, "Input"],
+Cell[19391, 567, 2925, 65, 335, "Input"],
+Cell[22319, 634, 1059, 30, 63, "Input"],
+Cell[23381, 666, 509, 9, 28, "Input"],
+Cell[23893, 677, 105, 1, 30, "Text"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[24035, 683, 90, 1, 50, "Section"],
+Cell[24128, 686, 9724, 205, 1185, "Input"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[33889, 896, 88, 1, 50, "Section"],
+Cell[33980, 899, 132, 1, 30, "Text"],
+Cell[CellGroupData[{
+Cell[34137, 904, 322, 7, 28, "Input"],
+Cell[34462, 913, 305, 7, 28, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[23558, 678, 90, 1, 64, "Section"],
-Cell[23651, 681, 9724, 205, 1185, "Input"]
-}, Closed]],
-Cell[CellGroupData[{
-Cell[33412, 891, 88, 1, 50, "Section"],
-Cell[33503, 894, 132, 1, 30, "Text"],
-Cell[CellGroupData[{
-Cell[33660, 899, 322, 7, 28, "Input"],
-Cell[33985, 908, 305, 7, 28, "Output"]
-}, Open  ]],
-Cell[CellGroupData[{
-Cell[34327, 920, 126, 2, 28, "Input"],
-Cell[34456, 924, 114, 1, 28, "Output"]
+Cell[34804, 925, 126, 2, 28, "Input"],
+Cell[34933, 929, 114, 1, 28, "Output"]
 }, Open  ]]
 }, Closed]],
 Cell[CellGroupData[{
-Cell[34619, 931, 154, 2, 50, "Section"],
+Cell[35096, 936, 154, 2, 50, "Section"],
 Cell[CellGroupData[{
-Cell[34798, 937, 331, 5, 28, "Input"],
-Cell[35132, 944, 34388, 574, 231, "Output"]
+Cell[35275, 942, 331, 5, 28, "Input"],
+Cell[35609, 949, 34388, 574, 231, "Output"]
 }, Open  ]],
-Cell[69535, 1521, 1286, 36, 63, "Input"],
+Cell[70012, 1526, 1286, 36, 63, "Input"],
 Cell[CellGroupData[{
-Cell[70846, 1561, 759, 17, 46, "Input"],
-Cell[71608, 1580, 44694, 753, 241, "Output"]
-}, Open  ]],
-Cell[CellGroupData[{
-Cell[116339, 2338, 563, 14, 46, "Input"],
-Cell[116905, 2354, 41990, 699, 243, "Output"]
-}, Open  ]],
-Cell[158910, 3056, 688, 20, 80, "Input"],
-Cell[CellGroupData[{
-Cell[159623, 3080, 694, 15, 28, "Input"],
-Cell[160320, 3097, 4680, 85, 240, "Output"]
+Cell[71323, 1566, 759, 17, 46, "Input"],
+Cell[72085, 1585, 44694, 753, 241, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[165037, 3187, 355, 10, 28, "Input"],
-Cell[165395, 3199, 4053, 73, 238, "Output"]
+Cell[116816, 2343, 563, 14, 46, "Input"],
+Cell[117382, 2359, 41990, 699, 243, "Output"]
+}, Open  ]],
+Cell[159387, 3061, 688, 20, 80, "Input"],
+Cell[CellGroupData[{
+Cell[160100, 3085, 694, 15, 28, "Input"],
+Cell[160797, 3102, 4680, 85, 240, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[169485, 3277, 593, 15, 28, "Input"],
-Cell[170081, 3294, 52476, 869, 308, "Output"]
+Cell[165514, 3192, 355, 10, 28, "Input"],
+Cell[165872, 3204, 4053, 73, 238, "Output"]
 }, Open  ]],
-Cell[222572, 4166, 92, 1, 28, "Input"],
-Cell[222667, 4169, 1168, 32, 51, "Input"],
 Cell[CellGroupData[{
-Cell[223860, 4205, 606, 9, 28, "Input"],
-Cell[224469, 4216, 436, 8, 28, "Output"]
+Cell[169962, 3282, 593, 15, 28, "Input"],
+Cell[170558, 3299, 52476, 869, 308, "Output"]
 }, Open  ]],
-Cell[224920, 4227, 129, 1, 30, "Text"]
+Cell[223049, 4171, 92, 1, 28, "Input"],
+Cell[223144, 4174, 1168, 32, 51, "Input"],
+Cell[CellGroupData[{
+Cell[224337, 4210, 606, 9, 28, "Input"],
+Cell[224946, 4221, 436, 8, 28, "Output"]
+}, Open  ]],
+Cell[225397, 4232, 129, 1, 30, "Text"]
 }, Closed]]
-}, Open  ]]
 }
 ]
 *)
