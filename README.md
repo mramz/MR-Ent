@@ -7,12 +7,13 @@ I used the movie lens data set (http://grouplens.org/datasets/movielens/) which 
 
 The prior user and movie latent features where obtained by using stochastic gradient descent.
 
-Future releases are to create a mathematica package that includes stochastic gradient descent for the prior information.
-
 
 TO RUN
 
 Change the path in the notebook for the priors, data, and side information include in the importData folder. Then evalute the notebook. THe number of iteration can be change in the RUN section of the notebook in the 4th varible.
+
+
+Future releases are to create a mathematica package that includes stochastic gradient descent for the prior information. As well as a python version.
 
 
 Copyright 2016, Mick Ramsey, All rights reserved
