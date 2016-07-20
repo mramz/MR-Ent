@@ -1,7 +1,7 @@
 # MREnt
 MaxEnt Matrix Factorization
 
-Based on the Netflix prize this uses bayesian matrix factorization and maximum relative entropy (ME) to prediction movie rating (http://arxiv.org/abs/0708.1593). ME is used to put contraints based on movie genres on the movie latent features. Hierarchical bayesian matrix factorization for the user latent features as found in (Salakhutdinov Mnih 2008) at https://www.cs.toronto.edu/~amnih/papers/bpmf.pdf.
+Based on the Netflix prize this uses bayesian matrix factorization and maximum relative entropy (ME) to prediction movie rating (http://arxiv.org/abs/0708.1593). ME is used to put contraints based on movie genres on the movie latent features. Hierarchical bayesian matrix factorization for the user latent features as found in (Salakhutdinov Mnih 2008) at https://www.cs.toronto.edu/~amnih/papers/bpmf.pdf. This showed to have a better RSME than standard matrix factorization and bayesian matrix factorization.
 
 I used the movie lens data set (http://grouplens.org/datasets/movielens/) which includes information about the movies include the genre.
 
